@@ -1,0 +1,9 @@
+CompileFlags:
+  Add:
+    - -I/opt/homebrew/include
+    - -I/opt/homebrew/opt/raylib/include
+    - -Isrc
+    - -std=c++17
+    - -DPLATFORM_DESKTOP
+    - -DGRAPHICS_API_OPENGL_33
+  CompilationDatabase: build
