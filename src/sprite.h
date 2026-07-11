@@ -3,57 +3,42 @@
 #include "raylib.h"
 
 // 基于 raylib 的简单 Sprite
-// 支持：整图绘制、按行列切帧、翻转、偏移、简单逐帧动画
+// Image 在构造时载入；Texture2D 仅在 update 检测到新帧时更新；析构时 Unload
 class Sprite
 {
 public:
-    Sprite() = default;
-
-    // 从文件加载纹理
-    explicit Sprite(const char* path)
+    // 从文件加载 Image；path 为空则创建空 Sprite
+    explicit Sprite(const char* path = nullptr)
     {
-        texture = LoadTexture(path);
-        owns_texture = (texture.id != 0);
+        if (path != nullptr)
+        {
+            image = LoadImage(path);
+        }
     }
 
-    // 从 Image 创建纹理（调用方可自行 UnloadImage）
-    explicit Sprite(Image src)
+    // 拷贝 Image；调用方可自行 UnloadImage
+    explicit Sprite(Image src = {})
     {
-        texture = LoadTextureFromImage(src);
-        owns_texture = (texture.id != 0);
-    }
-
-    // 使用已有 Texture2D（不负责卸载）
-    explicit Sprite(Texture2D tex) : texture(tex)
-    {
+        if (src.data != nullptr)
+        {
+            image = ImageCopy(src);
+        }
     }
 
     ~Sprite()
     {
-        if (owns_texture && texture.id != 0)
+        if (texture.id != 0)
         {
             UnloadTexture(texture);
+        }
+        if (image.data != nullptr)
+        {
+            UnloadImage(image);
         }
     }
 
     Sprite(const Sprite&) = delete;
     Sprite& operator=(const Sprite&) = delete;
-
-    // ---------- 纹理 ----------
-    Texture2D get_texture() const
-    {
-        return texture;
-    }
-
-    void set_texture(Texture2D tex)
-    {
-        if (owns_texture && texture.id != 0)
-        {
-            UnloadTexture(texture);
-        }
-        texture = tex;
-        owns_texture = false;
-    }
 
     // ---------- 位置 ----------
     Vector2 get_pos() const
@@ -119,6 +104,7 @@ public:
             {
                 frame = 0;
             }
+            texture_frame = -1;  // 强制下次 update 重建纹理
         }
     }
 
@@ -135,10 +121,11 @@ public:
             {
                 frame = 0;
             }
+            texture_frame = -1;
         }
     }
 
-    // 当前帧：从左到右、从上到下编号
+    // 当前帧：从左到右、从上到下编号（真正换贴图在 update 里做）
     int get_frame() const
     {
         return frame;
@@ -200,39 +187,33 @@ public:
         frame_process = 0.0f;
     }
 
-    // 每帧调用；用 GetFrameTime 推进动画
+    // 推进动画；若进入新帧则重建 texture
     void update()
     {
-        if (stopped || during_time <= 0.0f)
+        if (!stopped && during_time > 0.0f)
         {
-            return;
-        }
-        int total = hframes * vframes;
-        if (total <= 1)
-        {
-            return;
+            int total = hframes * vframes;
+            if (total > 1)
+            {
+                frame_process += GetFrameTime();
+                float frame_duration = during_time / (float)total;
+                while (frame_process >= frame_duration)
+                {
+                    frame_process -= frame_duration;
+                    frame = (frame + 1) % total;
+                }
+            }
         }
 
-        frame_process += GetFrameTime();
-        float frame_duration = during_time / (float)total;
-        while (frame_process >= frame_duration)
+        // 仅在帧变化（含首次）时更新 texture
+        if (frame != texture_frame)
         {
-            frame_process -= frame_duration;
-            frame = (frame + 1) % total;
+            refresh_texture();
+            texture_frame = frame;
         }
     }
 
     // ---------- 绘制 ----------
-    // 当前帧在纹理中的源矩形
-    Rectangle get_source_rect() const
-    {
-        float fw = (float)texture.width / (float)hframes;
-        float fh = (float)texture.height / (float)vframes;
-        int col = frame % hframes;
-        int row = frame / hframes;
-        return Rectangle{col * fw, row * fh, fw, fh};
-    }
-
     void draw() const
     {
         if (texture.id == 0)
@@ -240,7 +221,12 @@ public:
             return;
         }
 
-        Rectangle src = get_source_rect();
+        Rectangle src{
+            0.0f,
+            0.0f,
+            (float)texture.width,
+            (float)texture.height,
+        };
 
         // raylib：source 宽/高为负表示翻转
         if (flip_h)
@@ -268,12 +254,13 @@ public:
     }
 
 private:
-    Texture2D texture{};   // 当前纹理
-    bool owns_texture = false;
+    Image image{};            // 精灵表原图，构造时载入
+    Texture2D texture{};      // 当前帧纹理，仅在 update 中更新
+    int texture_frame = -1;   // 当前 texture 对应的帧；-1 表示尚未生成
 
     int vframes = 1;  // 纹理行数
     int hframes = 1;  // 纹理列数
-    int frame = 0;    // 当前帧
+    int frame = 0;    // 逻辑当前帧
 
     float frame_process = 0.0f;  // 当前帧已播放时间
     float during_time = 0.0f;    // 一整轮动画时长（秒）
@@ -285,4 +272,29 @@ private:
     Vector2 pos{0, 0};     // 场景坐标
     Vector2 offset{0, 0};  // 绘制偏移，实际位置 = pos + offset
     Vector2 scale{1, 1};   // 缩放
+
+    // 按当前 frame 从 image 裁出一帧，重建 texture
+    void refresh_texture()
+    {
+        if (image.data == nullptr || hframes < 1 || vframes < 1)
+        {
+            return;
+        }
+
+        if (texture.id != 0)
+        {
+            UnloadTexture(texture);
+            texture = {};
+        }
+
+        float fw = (float)image.width / (float)hframes;
+        float fh = (float)image.height / (float)vframes;
+        int col = frame % hframes;
+        int row = frame / hframes;
+        Rectangle crop{col * fw, row * fh, fw, fh};
+
+        Image frame_img = ImageFromImage(image, crop);
+        texture = LoadTextureFromImage(frame_img);
+        UnloadImage(frame_img);
+    }
 };
