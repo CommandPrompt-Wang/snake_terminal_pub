@@ -1,19 +1,18 @@
 #pragma once
 
 #include "raylib.h"
+#include "render.h"
+#include <string>
 
 // 基于 raylib 的简单 Sprite
 // Image 在构造时载入；Texture2D 仅在 update 检测到新帧时更新；析构时 Unload
-class Sprite
+class Sprite : Basic_Render_Class
 {
 public:
-    // 从文件加载 Image；path 为空则创建空 Sprite
-    explicit Sprite(const char* path = nullptr)
+    // 从文件加载 Image；
+    explicit Sprite(const std::string& path)
     {
-        if (path != nullptr)
-        {
-            image = LoadImage(path);
-        }
+        image = LoadImage(path.c_str());
     }
 
     // 拷贝 Image；调用方可自行 UnloadImage
@@ -37,9 +36,6 @@ public:
         }
     }
 
-    Sprite(const Sprite&) = delete;
-    Sprite& operator=(const Sprite&) = delete;
-
     // ---------- 位置 ----------
     Vector2 get_pos() const
     {
@@ -48,6 +44,15 @@ public:
     void set_pos(Vector2 p)
     {
         pos = p;
+    }
+
+    bool get_hide() const
+    {
+        return hide;
+    }
+    void set_hide(bool h)
+    {
+        hide = h;
     }
 
     // 实际绘制位置 = pos + offset
@@ -190,7 +195,8 @@ public:
     // 推进动画；若进入新帧则重建 texture
     void update()
     {
-        if (!stopped && during_time > 0.0f)
+
+        if (hframes * vframes != 1 && !stopped && during_time > 0.0f)
         {
             int total = hframes * vframes;
             if (total > 1)
@@ -214,8 +220,9 @@ public:
     }
 
     // ---------- 绘制 ----------
-    void draw() const
+    void draw()
     {
+        if (hide) return;
         if (texture.id == 0)
         {
             return;
@@ -269,6 +276,8 @@ private:
     bool flip_h = false;  // 水平翻转
     bool flip_v = false;  // 垂直翻转
 
+    bool hide = false; // 是否隐藏（不渲染）
+
     Vector2 pos{0, 0};     // 场景坐标
     Vector2 offset{0, 0};  // 绘制偏移，实际位置 = pos + offset
     Vector2 scale{1, 1};   // 缩放
@@ -285,6 +294,12 @@ private:
         {
             UnloadTexture(texture);
             texture = {};
+        }
+
+        if (hframes == 1 && vframes == 1)
+        {
+            texture = LoadTextureFromImage(image);
+            return;
         }
 
         float fw = (float)image.width / (float)hframes;
