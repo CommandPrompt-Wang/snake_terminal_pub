@@ -146,7 +146,6 @@ private:
 
 class Snake_Body : Basic_Render_Class
 {
-    
     void update ()
     {}
     void draw ()
