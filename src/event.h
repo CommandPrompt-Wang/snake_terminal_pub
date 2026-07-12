@@ -23,6 +23,9 @@ namespace EventNamespace {
             START = 20,
             PAUSE,
             STOP,
+
+            // 2x+ general events
+            SCENE_CHANGE = 23,
         };
 
         enum class EventType {
@@ -109,6 +112,35 @@ namespace EventNamespace {
             }
         }
 
+        int getScene() const {
+            return scene.load(std::memory_order_acquire);
+        }
+
+        void setScene(int s) {
+            scene.store(s, std::memory_order_release);
+        }
+
+        void request_quit() {
+            should_quit.store(true, std::memory_order_release);
+        }
+
+        bool is_quit_requested() const {
+            return should_quit.load(std::memory_order_acquire);
+        }
+
+        void setApplePosition(int x, int y) {
+            appleX.store(x, std::memory_order_release);
+            appleY.store(y, std::memory_order_release);
+        }
+
+        int getAppleX() const {
+            return appleX.load(std::memory_order_acquire);
+        }
+
+        int getAppleY() const {
+            return appleY.load(std::memory_order_acquire);
+        }
+
         void reset() {
             player1Dir.store(Event::CONSUMED, std::memory_order_release);
             player2Dir.store(Event::CONSUMED, std::memory_order_release);
@@ -123,6 +155,8 @@ namespace EventNamespace {
             
             player1Score.store(0, std::memory_order_release);
             player2Score.store(0, std::memory_order_release);
+
+            scene.store(0, std::memory_order_release);  // MENU
         }
 
     private:
@@ -144,6 +178,15 @@ namespace EventNamespace {
         // scores
         std::atomic<int> player1Score{0};
         std::atomic<int> player2Score{0};
+
+        // apple position
+        std::atomic<int> appleX{-1};
+        std::atomic<int> appleY{-1};
+
+        std::atomic<bool> should_quit{false};
+
+        // current scene (Scene enum as int)
+        std::atomic<int> scene{0};  // MENU
         
     public:
         static EventSrv& instance() {
@@ -194,6 +237,34 @@ namespace EventServer {
     
     inline int addScore(int player, int points) {
         return EventNamespace::EventSrv::instance().addScore(player, points);
+    }
+
+    inline void request_quit() {
+        EventNamespace::EventSrv::instance().request_quit();
+    }
+
+    inline bool is_quit_requested() {
+        return EventNamespace::EventSrv::instance().is_quit_requested();
+    }
+
+    inline void setApplePosition(int x, int y) {
+        EventNamespace::EventSrv::instance().setApplePosition(x, y);
+    }
+
+    inline int getAppleX() {
+        return EventNamespace::EventSrv::instance().getAppleX();
+    }
+
+    inline int getAppleY() {
+        return EventNamespace::EventSrv::instance().getAppleY();
+    }
+
+    inline int getScene() {
+        return EventNamespace::EventSrv::instance().getScene();
+    }
+
+    inline void setScene(int s) {
+        EventNamespace::EventSrv::instance().setScene(s);
     }
     
     // will consume all events and reset speed factors to 1, scores to 0

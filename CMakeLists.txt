@@ -5,28 +5,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Homebrew raylib on Apple Silicon / Intel Mac
-list(APPEND CMAKE_PREFIX_PATH
-    "/opt/homebrew"
-    "/usr/local"
-)
-
-find_package(raylib 6.0 REQUIRED)
+# raylib as a git submodule – built inline, no system install needed
+add_subdirectory(third_party/raylib)
 
 add_executable(snake
-    src/main.cpp
+    src/app.cpp
+    src/input_thread.cpp
+    src/render_thread.cpp
 )
 
 target_include_directories(snake PRIVATE ${CMAKE_SOURCE_DIR}/src)
 target_link_libraries(snake PRIVATE raylib)
-
-if(APPLE)
-    target_link_libraries(snake PRIVATE
-        "-framework IOKit"
-        "-framework Cocoa"
-        "-framework OpenGL"
-    )
-endif()
 
 # Symlink compile_commands.json to project root for clangd / VS Code IntelliSense
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
