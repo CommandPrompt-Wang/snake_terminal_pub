@@ -42,12 +42,16 @@ static bool load_config(const std::string &path) {
         bool  b = (val == "1" || val == "true" || val == "yes");
         float f = 0.0f;
         try { f = std::stof(val); } catch (...) {}
+        int i = 0;
+        try { i = std::stoi(val); } catch (...) {}
 
         if (key == "allow_acceleration")        cfg.allowAcceleration        = b;
         if (key == "toroidal_space")            cfg.toroidalSpace            = b;
         if (key == "allow_through_others")      cfg.allowThroughOthers       = b;
         if (key == "speed_factor")              cfg.speed_factor             = std::max(0.1f, f);
         if (key == "increasing_difficulty")     cfg.increasing_difficulty    = std::max(0.0f, f);
+        if (key == "time_match_duration")       cfg.time_match_duration      = std::max(0, i);
+        if (key == "reborn_costs")               cfg.reborn_costs             = std::max(0, i);
     }
     return true;
 }
@@ -63,4 +67,6 @@ static void save_config(const std::string &path) {
     f << "allow_through_others = " << (cfg.allowThroughOthers  ? "true" : "false") << "\n";
     f << "speed_factor            = " << std::fixed << std::setprecision(1) << cfg.speed_factor << "\n";
     f << "increasing_difficulty   = " << std::fixed << std::setprecision(1) << cfg.increasing_difficulty << "\n";
+    f << "time_match_duration     = " << cfg.time_match_duration << "\n";
+    f << "reborn_costs            = " << cfg.reborn_costs << "\n";
 }

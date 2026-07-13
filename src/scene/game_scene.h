@@ -43,7 +43,9 @@ private:
     static bool is_opposite(Direction a, Direction b);
     static Position next_head(const SnakeState &s);
     static bool on_body(const std::deque<Position> &body, const Position &p, int skipFront = 0);
+    static Position random_safe_pos(const SnakeState &p1, const SnakeState &p2);
     void init_snake(SnakeState &s, int startX, int startY, Direction dir, int len);
+    bool respawn_player(SnakeState &p, const SnakeState &other, int player);
     bool tick_player(SnakeState &p, int player, const SnakeState &other, Position &apple);
     void consume_pending_dir();
 
@@ -64,6 +66,7 @@ private:
     // timing
     using Clock = std::chrono::steady_clock;
     Clock::time_point last_tick_;
+    float time_elapsed_ = 0;
 
     // rendering
     Draw_List draw_list_;

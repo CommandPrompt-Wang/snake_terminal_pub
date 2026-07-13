@@ -12,7 +12,7 @@ void EndScene::on_enter() {
     int score1 = Global::last_score_player1;
     int score2 = Global::last_score_player2;
 
-    die_reason_ = parse_game_over_reason(Global::last_game_over_reason);
+    die_reason_ = build_die_reason();
 
     if (score1 > score2) {
         winner_text_ = "PLAYER1 WINS";
@@ -162,31 +162,32 @@ int EndScene::get_next_scene_id() const {
     return static_cast<int>(next_scene_id_);
 }
 
-std::string EndScene::parse_game_over_reason(Global::GameOverReason reason) {
-    switch (reason) {
-        case Global::GameOverReason::PLAYER1_ON_WALL:
-            return "PLAYER1 HIT THE WALL";
-        case Global::GameOverReason::PLAYER2_ON_WALL:
-            return "PLAYER2 HIT THE WALL";
-        case Global::GameOverReason::PLAYER1_ON_SELF:
-            return "PLAYER1 HIT ITSELF";
-        case Global::GameOverReason::PLAYER2_ON_SELF:
-            return "PLAYER2 HIT ITSELF";
-        case Global::GameOverReason::PLAYER1_ON_PLAYER2:
-            return "PLAYER1 COLLIDED WITH PLAYER2";
-        case Global::GameOverReason::PLAYER2_ON_PLAYER1:
-            return "PLAYER2 COLLIDED WITH PLAYER1";
-        case Global::GameOverReason::PLAYER1_STARVED:
-            return "PLAYER1 STARVED";
-        case Global::GameOverReason::PLAYER2_STARVED:
-            return "PLAYER2 STARVED";
-        case Global::GameOverReason::BOTH_STARVED:
-            return "BOTH PLAYERS STARVED";
-        case Global::GameOverReason::TIMEOUT:
-            return "TIME LIMIT REACHED";
-        case Global::GameOverReason::MANUAL:
-            return "GAME ENDED";
-        default:
-            return "";
+const char* EndScene::status_text(Global::PlayerStatus s, int player) {
+    const char* p = (player == 1) ? "PLAYER1" : "PLAYER2";
+    switch (s) {
+        case Global::PlayerStatus::ON_WALL:   return TextFormat("%s HIT THE WALL", p);
+        case Global::PlayerStatus::ON_SELF:   return TextFormat("%s HIT ITSELF", p);
+        case Global::PlayerStatus::ON_PLAYER: return TextFormat("%s COLLIDED", p);
+        case Global::PlayerStatus::STARVED:   return TextFormat("%s STARVED", p);
+        default: return "";
     }
+}
+
+std::string EndScene::build_die_reason() {
+    // 全局原因优先
+    if (Global::end_reason == Global::GameOverReason::TIMEOUT)
+        return "TIME LIMIT REACHED";
+    if (Global::end_reason == Global::GameOverReason::MANUAL)
+        return "GAME ENDED";
+
+    // 玩家死亡原因，至多两行
+    std::string r;
+    auto s1 = Global::player_status1;
+    auto s2 = Global::player_status2;
+    if (s1 != Global::PlayerStatus::ALIVE) r += status_text(s1, 1);
+    if (s2 != Global::PlayerStatus::ALIVE) {
+        if (!r.empty()) r += '\n';
+        r += status_text(s2, 2);
+    }
+    return r;
 }

@@ -20,6 +20,9 @@ void ConfigScene::on_inputevent(InputEvent& event) {
 
     Config& cfg = game_config();
 
+    // CTRL 键按住时调整量 ×10
+    float mult = (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) ? 10.0f : 1.0f;
+
     switch (event.get_key_code()) {
         case KEY_UP:
         case KEY_W:
@@ -48,12 +51,16 @@ void ConfigScene::on_inputevent(InputEvent& event) {
                     cfg.allowThroughOthers = !cfg.allowThroughOthers;
                     break;
                 case Option::SPEED_FACTOR:
-                    cfg.speed_factor = std::max(0.1f, cfg.speed_factor - 0.1f);
+                    cfg.speed_factor = std::max(0.1f, cfg.speed_factor - 0.1f * mult);
                     break;
                 case Option::INCREASING_DIFFICULTY:
-                    cfg.increasing_difficulty = std::max(0.0f, cfg.increasing_difficulty - 0.1f);
+                    cfg.increasing_difficulty = std::max(0.0f, cfg.increasing_difficulty - 0.1f * mult);
                     break;
-                case Option::BACK:
+                case Option::TIME_MATCH_DURATION:
+                    cfg.time_match_duration = std::max(0, cfg.time_match_duration - static_cast<int>(1 * mult));
+                    break;                case Option::REBORN_COSTS:
+                    cfg.reborn_costs = std::max(0, cfg.reborn_costs - static_cast<int>(1 * mult));
+                    break;                case Option::BACK:
                     break;
             }
             event.consume();
@@ -72,10 +79,16 @@ void ConfigScene::on_inputevent(InputEvent& event) {
                     cfg.allowThroughOthers = !cfg.allowThroughOthers;
                     break;
                 case Option::SPEED_FACTOR:
-                    cfg.speed_factor += 0.1f;
+                    cfg.speed_factor += 0.1f * mult;
                     break;
                 case Option::INCREASING_DIFFICULTY:
-                    cfg.increasing_difficulty += 0.1f;
+                    cfg.increasing_difficulty += 0.1f * mult;
+                    break;
+                case Option::TIME_MATCH_DURATION:
+                    cfg.time_match_duration += static_cast<int>(1 * mult);
+                    break;
+                case Option::REBORN_COSTS:
+                    cfg.reborn_costs += static_cast<int>(1 * mult);
                     break;
                 case Option::BACK:
                     break;
@@ -126,12 +139,14 @@ void ConfigScene::render() {
         "Allow Through Other Player",
         "Speed Factor",
         "Increasing Difficulty",
+        "Time Match Duration",
+        "Reborn Costs",
         "BACK",
     };
 
     const int optFont = 25;
     const int optGap  = 62;
-    const int optStartY = screenH / 3;
+    const int optStartY = screenH / 3 - 30;
 
     for (int i = 0; i < OPTION_COUNT; ++i) {
         int y = optStartY + i * optGap;
@@ -160,6 +175,20 @@ void ConfigScene::render() {
                 case Option::INCREASING_DIFFICULTY:
                     std::snprintf(floatBuf, sizeof(floatBuf), "%.1f", cfg.increasing_difficulty);
                     valueStr = floatBuf;
+                    break;
+                case Option::TIME_MATCH_DURATION:
+                    if (cfg.time_match_duration == 0)
+                        valueStr = "inf";
+                    else {
+                        std::snprintf(floatBuf, sizeof(floatBuf), "%d", cfg.time_match_duration);
+                        valueStr = floatBuf;
+                    }
+                    break;
+                case Option::REBORN_COSTS:
+                    std::snprintf(floatBuf, sizeof(floatBuf), "%d", cfg.reborn_costs);
+                    valueStr = floatBuf;
+                    break;
+                case Option::BACK:
                     break;
                 default:
                     break;
@@ -199,8 +228,8 @@ void ConfigScene::render() {
     }
 
     // === Hint at bottom ===
-    DrawText("Arrow keys to navigate / adjust    ESC to return",
-             screenW / 2 - MeasureText("Arrow keys to navigate / adjust    ESC to return", 18) / 2,
+    DrawText("Arrow keys to navigate / adjust    Ctrl for x10    ESC to return",
+             screenW / 2 - MeasureText("Arrow keys to navigate / adjust    Ctrl for x10    ESC to return", 18) / 2,
              screenH - 40,
              18, GRAY);
 }

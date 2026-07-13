@@ -6,6 +6,8 @@ struct Config {
     bool allowThroughOthers = false; // can pass through the other player
     float speed_factor         = 1.0f;  // overall game speed multiplier (min 0.1)
     float increasing_difficulty = 1.0f; // difficulty ramp coefficient (0 = constant speed)
+    int time_match_duration = 120; // time match duration in seconds (0 = infinite, for timerace mode)
+    int reborn_costs = 1;          // points deducted on death in TIMERACE mode
 };
 
 inline Config& game_config() {

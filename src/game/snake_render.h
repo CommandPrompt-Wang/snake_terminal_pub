@@ -16,7 +16,7 @@ inline Vector2 operator + (const Vector2& a,const Vector2& b)
 }
 inline bool operator == (const Vector2& a,const Vector2& b)
 {
-    return abs(a.x - b.x) < eps && abs(a.y - b.y) < eps;
+    return std::abs(a.x - b.x) < eps && std::abs(a.y - b.y) < eps;
 }
 
 // 在环形空间中检查 (center + offset) 是否等于 candidate（考虑边界卷绕）
@@ -229,6 +229,10 @@ public:
         {
             body.emplace_back(playerid, (Vector2){0, 0});
             body.back().set_scale(scale);
+        }
+        while (body.size() > snake->body.size())
+        {
+            body.pop_back();
         }
         if(snake->body.size() != 0)
         {

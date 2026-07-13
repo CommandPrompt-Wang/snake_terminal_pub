@@ -33,6 +33,61 @@ bool GameScene::on_body(const std::deque<Position> &body, const Position &p, int
     return false;
 }
 
+Position GameScene::random_safe_pos(const SnakeState &p1, const SnakeState &p2) {
+    static std::mt19937 rng{std::random_device{}()};
+    std::uniform_int_distribution<int> dx(0, GRID_W - 1);
+    std::uniform_int_distribution<int> dy(0, GRID_H - 1);
+
+    for (int tries = 0; tries < 200; ++tries) {
+        Position p{dx(rng), dy(rng)};
+        bool on_snake = false;
+        for (auto &seg : p1.body) if (seg == p) { on_snake = true; break; }
+        if (!on_snake) for (auto &seg : p2.body) if (seg == p) { on_snake = true; break; }
+        if (!on_snake) return p;
+    }
+    return {-1, -1}; // grid full
+}
+
+bool GameScene::respawn_player(SnakeState &p, const SnakeState &other, int player) {
+    int deduct = game_config().reborn_costs;
+
+    // 从尾部切掉 reborn_costs 节（最多切到空）
+    int to_remove = std::min(deduct, (int)p.body.size());
+    for (int i = 0; i < to_remove; ++i)
+        p.body.pop_back();
+
+    // 同步分数 = 身体长度 - 3（先同步，再判断饿死）
+    if (player == 1) score1_ = (int)p.body.size() - 3;
+    else             score2_ = (int)p.body.size() - 3;
+
+    // 身体切空了 → 饿死 (score = 0 - 3 = -3)
+    if (p.body.empty()) {
+        if (player == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
+        else              Global::player_status2 = Global::PlayerStatus::STARVED;
+        return false;
+    }
+
+    // 找安全位置放置头部
+    Position pos = random_safe_pos(p, other);
+    if (pos.x < 0 || pos.y < 0) {
+        // 网格满了 → 饿死
+        if (player == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
+        else              Global::player_status2 = Global::PlayerStatus::STARVED;
+        return false;
+    }
+
+    // 将整条蛇平移到安全位置
+    int dx = pos.x - p.body[0].x;
+    int dy = pos.y - p.body[0].y;
+    for (auto &seg : p.body) {
+        seg.x += dx;
+        seg.y += dy;
+    }
+
+    p.curSpeed = 1;
+    return true;
+}
+
 void GameScene::init_snake(SnakeState &s, int startX, int startY, Direction dir, int len) {
     s.body.clear();
     s.curDir = dir;
@@ -52,8 +107,8 @@ bool GameScene::tick_player(SnakeState &p, int player, const SnakeState &other, 
     // wall collision / wrap-around
     if (!game_config().toroidalSpace) {
         if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H) {
-            if (player == 1) Global::last_game_over_reason = Global::GameOverReason::PLAYER1_ON_WALL;
-            else if (player == 2) Global::last_game_over_reason = Global::GameOverReason::PLAYER2_ON_WALL;
+            if (player == 1) Global::player_status1 = Global::PlayerStatus::ON_WALL;
+            else             Global::player_status2 = Global::PlayerStatus::ON_WALL;
             return false;
         }
     } else {
@@ -65,15 +120,15 @@ bool GameScene::tick_player(SnakeState &p, int player, const SnakeState &other, 
 
     // self collision
     if (on_body(p.body, head, 1)) {
-        if (player == 1) Global::last_game_over_reason = Global::GameOverReason::PLAYER1_ON_SELF;
-        else if (player == 2) Global::last_game_over_reason = Global::GameOverReason::PLAYER2_ON_SELF;
+        if (player == 1) Global::player_status1 = Global::PlayerStatus::ON_SELF;
+        else             Global::player_status2 = Global::PlayerStatus::ON_SELF;
         return false;
     }
 
     // other-player collision
     if (!game_config().allowThroughOthers && !other.body.empty() && on_body(other.body, head)) {
-        if (player == 1) Global::last_game_over_reason = Global::GameOverReason::PLAYER1_ON_PLAYER2;
-        else if (player == 2) Global::last_game_over_reason = Global::GameOverReason::PLAYER2_ON_PLAYER1;
+        if (player == 1) Global::player_status1 = Global::PlayerStatus::ON_PLAYER;
+        else             Global::player_status2 = Global::PlayerStatus::ON_PLAYER;
         return false;
     }
 
@@ -81,7 +136,16 @@ bool GameScene::tick_player(SnakeState &p, int player, const SnakeState &other, 
     p.lastMoveDir = p.curDir;
 
     if (head == apple) {
+        // 吃苹果加分
+        if (player == 1) ++score1_;
+        else             ++score2_;
         apple = random_apple_pos(/* player1 = */ p, /* player2 = */ other);
+        if (apple.x < 0) {
+            // Grid full — starvation
+            if (player == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
+            else             Global::player_status2 = Global::PlayerStatus::STARVED;
+            return false;
+        }
     } else {
         p.body.pop_back();
     }
@@ -126,6 +190,7 @@ void GameScene::on_enter() {
     apple_ = random_apple_pos(p1_, p2_);
     score1_ = 0; score2_ = 0;
     speed1_ = 1; speed2_ = 1;
+    time_elapsed_ = 0;
 
     last_tick_ = Clock::now();
     
@@ -178,7 +243,9 @@ void GameScene::on_inputevent(InputEvent& event) {
             if (pause) {
                 finished_ = true;
                 next_scene_id_ = static_cast<int>(SceneId::DIE);
-                Global::last_game_over_reason = Global::GameOverReason::MANUAL;
+                Global::end_reason = Global::GameOverReason::MANUAL;
+                Global::player_status1 = Global::PlayerStatus::ALIVE;
+                Global::player_status2 = Global::PlayerStatus::ALIVE;
                 event.consume();
             }
     }
@@ -189,6 +256,9 @@ void GameScene::update(float dt) {
         draw_list_.update();
         return;
     }
+
+    // TIMERACE: 累计经过时间
+    time_elapsed_ += dt;
 
     consume_pending_dir();
     // speed boost
@@ -216,17 +286,55 @@ void GameScene::update(float dt) {
 
         // Each player moves curSpeed times per tick (1 = normal, 2 = boosted)
         bool alive1 = true, alive2 = true;
+        Global::PlayerStatus pstat1 = Global::PlayerStatus::NONE;
+        Global::PlayerStatus pstat2 = Global::PlayerStatus::NONE;
         for (int i = 0; i < std::max(p1_.curSpeed, 1); ++i) {
-            if (alive1) alive1 = tick_player(p1_, 1, p2_, apple_);
+            if (alive1) {
+                alive1 = tick_player(p1_, 1, p2_, apple_);
+                if (!alive1) pstat1 = Global::player_status1;
+            }
         }
         for (int i = 0; i < std::max(p2_.curSpeed, 1); ++i) {
-            if (alive2) alive2 = tick_player(p2_, 2, p1_, apple_);
+            if (alive2) {
+                alive2 = tick_player(p2_, 2, p1_, apple_);
+                if (!alive2) pstat2 = Global::player_status2;
+            }
         }
 
-        if (!alive1 || !alive2) {
-            Global::last_score_player1 = std::max(0, (int)p1_.body.size() - 3);
-            Global::last_score_player2 = std::max(0, (int)p2_.body.size() - 3);
-            finished_ = true;
+        if (Global::last_game_mode == Global::GameMode::TIMERACE) {
+            // ── TIMERACE: 死亡复活 + 扣分；仅饿死 / 超时真正结束 ──
+            bool starved = false;
+
+            // 复活死亡的玩家（网格满或分数 ≤ -3 时返回 false → 饿死）
+            bool s1 = !alive1 && !respawn_player(p1_, p2_, 1);
+            bool s2 = !alive2 && !respawn_player(p2_, p1_, 2);
+            if (s1 || s2) starved = true;
+
+            if (starved) {
+                Global::end_reason = Global::GameOverReason::DEATH;
+                Global::last_score_player1 = score1_;
+                Global::last_score_player2 = score2_;
+                finished_ = true;
+            }
+
+            // 超时检查
+            int dur = game_config().time_match_duration;
+            if (dur > 0 && time_elapsed_ >= dur) {
+                Global::end_reason = Global::GameOverReason::TIMEOUT;
+                Global::player_status1 = Global::PlayerStatus::ALIVE;
+                Global::player_status2 = Global::PlayerStatus::ALIVE;
+                Global::last_score_player1 = score1_;
+                Global::last_score_player2 = score2_;
+                finished_ = true;
+            }
+        } else {
+            // ── DEATHMATCH: 任何死亡都结束 ──
+            if (!alive1 || !alive2) {
+                Global::end_reason = Global::GameOverReason::DEATH;
+                Global::last_score_player1 = score1_;
+                Global::last_score_player2 = score2_;
+                finished_ = true;
+            }
         }
     }
     draw_list_.update();
@@ -257,11 +365,20 @@ void GameScene::render() {
 
     draw_list_.draw();
 
-    int score1 = std::max(0, (int)p1_.body.size() - 3);
-    int score2 = std::max(0, (int)p2_.body.size() - 3);
-    DrawText(TextFormat("P1: %d", score1), 10, 10, 20, DARKGREEN);
-    DrawText(TextFormat("P2: %d", score2), 10, 40, 20, DARKBLUE);
-    
+    // 统一使用 score1_/score2_ 显示
+    DrawText(TextFormat("P1: %d", score1_), 10, 10, 20, DARKGREEN);
+    DrawText(TextFormat("P2: %d", score2_), 10, 40, 20, DARKBLUE);
+
+    if (Global::last_game_mode == Global::GameMode::TIMERACE) {
+        int dur = game_config().time_match_duration;
+        if (dur > 0) {
+            int remain = std::max(0, dur - (int)time_elapsed_);
+            DrawText(TextFormat("TIME: %d", remain), 500, 10, 20, RED);
+        } else {
+            DrawText("TIME: inf", 500, 10, 20, RED);
+        }
+    }
+
     if (pause) {
         int screenW = GetScreenWidth();
         int screenH = GetScreenHeight();

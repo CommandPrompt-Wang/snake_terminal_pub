@@ -28,9 +28,11 @@ private:
         ALLOW_THROUGH_OTHERS,
         SPEED_FACTOR,
         INCREASING_DIFFICULTY,
+        TIME_MATCH_DURATION,
+        REBORN_COSTS,
         BACK,
     };
-    static constexpr int OPTION_COUNT = 6;
+    static constexpr int OPTION_COUNT = 8;
     Option current_option_ = Option::ALLOW_ACCELERATION;
     bool finished_ = false;
     int next_scene_id_ = static_cast<int>(SceneId::MENU);

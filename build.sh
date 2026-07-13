@@ -3,19 +3,29 @@
 # move to the script's directory
 cd "$(dirname "$0")"
 
-# build type: --debug -> Debug, otherwise Release
+# parse args
 BUILD_TYPE="Release"
-if [ "$1" = "--debug" ]; then
-    BUILD_TYPE="Debug"
-fi
+BUILD_RAYLIB=false
+
+for arg in "$@"; do
+    case "$arg" in
+        --debug)        BUILD_TYPE="Debug" ;;
+        --build-raylib) BUILD_RAYLIB=true  ;;
+    esac
+done
 
 # build the project
 mkdir -p build
-cd build && cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" && make -j$(nproc)
+cd build
 
-# distribute the build artifacts
+if [ "$BUILD_RAYLIB" = true ]; then
+    cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" || exit 1
+fi
+
+cmake --build . -j"$(nproc)" || exit 1
 cd ..
 
+# distribute the build artifacts
 rm -rf dist
 mkdir -p dist
 cp build/snake dist/snake

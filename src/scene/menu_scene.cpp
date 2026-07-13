@@ -4,7 +4,7 @@
 
 void MenuScene::on_enter() {
     finished_ = false;
-    current_option_ = Option::START;
+    current_option_ = Option::START_DEATHMATCH;
     next_scene_id_ = static_cast<int>(SceneId::GAME);
 }
 
@@ -38,8 +38,14 @@ void MenuScene::on_inputevent(InputEvent& event) {
         case KEY_ENTER:
         case KEY_SPACE:
             switch (current_option_) {
-                case Option::START:
+                case Option::START_DEATHMATCH:
                     finished_ = true;
+                    Global::last_game_mode = Global::GameMode::DEATHMATCH;
+                    next_scene_id_ = static_cast<int>(SceneId::GAME);
+                    break;
+                case Option::START_TIMERACE:
+                    finished_ = true;
+                    Global::last_game_mode = Global::GameMode::TIMERACE;
                     next_scene_id_ = static_cast<int>(SceneId::GAME);
                     break;
                 case Option::CONFIG:
@@ -77,7 +83,7 @@ void MenuScene::render() {
              53, DARKGREEN);
 
     // === Options ===
-    const char* labels[] = {"START", "CONFIG", "QUIT"};
+    const char* labels[] = {"DEATH MATCH", "TIME RACE", "CONFIG", "QUIT"};
     const int optFont = 25;
     const int optGap  = 62;
     const int optStartY = screenH / 2;

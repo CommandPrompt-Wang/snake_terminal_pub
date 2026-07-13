@@ -24,12 +24,13 @@ protected:
 
 private:
     enum class Option {
-        START,
+        START_DEATHMATCH,
+        START_TIMERACE,
         CONFIG,
         QUIT,
     };
-    static constexpr int OPTION_COUNT = 3;
-    Option current_option_ = Option::START;
+    static constexpr int OPTION_COUNT = 4;
+    Option current_option_ = Option::START_DEATHMATCH;
     bool finished_ = false;
     int next_scene_id_ = static_cast<int>(SceneId::GAME);
 };
