@@ -69,7 +69,7 @@ public:
     void set_pos (Vector2 pos)
     {
         this->pos = pos;
-        Vector2 draw_position(pos);
+        Vector2 draw_position = Vector2{32 * pos.x, 32 * pos.y} + Vector2{0, 200};
         fill.set_pos(draw_position);head[0].set_pos(draw_position);head[1].set_pos(draw_position);
         side[0].set_pos(draw_position);side[1].set_pos(draw_position);side[2].set_pos(draw_position);side[3].set_pos(draw_position);
         speedup[0].set_pos(draw_position);speedup[1].set_pos(draw_position);speedup[2].set_pos(draw_position);speedup[3].set_pos(draw_position);
@@ -139,7 +139,7 @@ private:
 
     inline static Sprite head[2] = {Sprite("resources/up_head.png"),Sprite("resources/right_head.png")};
     bool is_head = false,speed_up = false;
-    Direction dir_ = Direction::DOWN;
+    Direction dir_ = Direction::UP;
 
     Vector2 pos{0, 0};
     Vector2 scale{1, 1};
@@ -164,6 +164,7 @@ private:
     inline static const float speedup_time = 0.6; // 加速向后传递的时间
     SnakeState* snake;
     int playerid;
+    Vector2 scale = {1, 1};//设置缩放
 public:
     Snake_Body (SnakeState* snake, int playerid) : snake(snake), playerid(playerid) {}
 
@@ -182,5 +183,7 @@ public:
         }
     }
     void draw ()
-    {}
+    {
+        for(auto &i : body)i.draw();
+    }
 };
