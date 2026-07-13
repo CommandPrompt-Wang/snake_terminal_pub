@@ -31,6 +31,10 @@ public:
     {
         pos = p;
     }
+    void set_pos(float x,float y)
+    {
+        set_pos({x, y});
+    }
 
     bool get_hide() const
     {

@@ -63,7 +63,7 @@ void SceneManager::dispatch_input_events() {
 void SceneManager::run() {
     // -- Initialize raylib window --
     // This is the only place in the entire program where a window is created
-    InitWindow(800, 600, "Snake Terminal");
+    InitWindow(640, 840, "Snake Terminal");
     SetTargetFPS(60);
 
     // Start the initial scene

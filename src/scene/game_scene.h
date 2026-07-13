@@ -71,7 +71,7 @@ private:
     std::vector<std::unique_ptr<Snake_Block>> snake_blocks_;
 
     // cell size for rendering
-    static constexpr int CELL_SIZE = 30;
-    static constexpr int OFFSET_X = 100;
-    static constexpr int OFFSET_Y = 20;
+    static constexpr int CELL_SIZE = 32;
+    static constexpr int OFFSET_X = 0;
+    static constexpr int OFFSET_Y = 200;
 };
