@@ -3,6 +3,7 @@
 #include "raylib.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 
 void ConfigScene::on_enter() {

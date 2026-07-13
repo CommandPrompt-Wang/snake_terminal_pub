@@ -5,12 +5,16 @@
 ```
 src/
 ├── app.cpp                  # 入口：加载配置 → SceneManager::run()
-├── global.h                 # 全局共享状态（分数、苹果位置、scene id）
+├── global.h                 # 全局共享状态（分数、游戏结束原因）
+├── utility.h                # 通用类型：Position, Direction, SceneId, GRID_W/H
 ├── event/                   # Event 类层次（参考 snake_terminal）
 │   ├── event.h              # Event 基类：consume() / is_consumed()
 │   ├── input_event.h        # InputEvent(key_code, type, repeat)
 │   ├── quit_event.h         # QuitEvent
 │   └── scene_switch_event.h # SceneSwitchEvent(next_scene_id)
+├── config/                  # 配置系统
+│   ├── config.h             # Config 结构体 + game_config()
+│   └── config_loader.h      # 配置加载/保存
 ├── render/                  # 渲染组件
 │   ├── draw_list.h          # Draw_List（update/draw 批量管理）
 │   ├── render.h             # Basic_Render_Class 基类
@@ -18,13 +22,13 @@ src/
 ├── scene/                   # 场景系统
 │   ├── scene.h              # Scene 基类 + handle_event() 分发
 │   ├── scene_manager.h/cpp  # 主循环：输入→事件→更新→渲染
-│   ├── game_scene.h/cpp     # 游戏主场景（蛇移动、碰撞、苹果）
-│   └── menu_scene.h/cpp     # 菜单场景
-└── game/                    # 游戏数据定义
-    ├── snake.h              # SnakeState, Direction, Position, SceneId
-    ├── snake_render.h       # Snake_Block（蛇身精灵渲染）
-    ├── config.h             # Config 结构体
-    └── config_loader.h      # 配置加载/保存
+│   ├── menu_scene.h/cpp     # 菜单场景
+│   ├── config_scene.h/cpp   # 配置设置场景
+│   ├── game_scene.h/cpp     # 游戏主场景（蛇移动、碰撞、苹果、穿墙）
+│   └── end_scene.h/cpp      # 结算场景（显示胜者与游戏结束原因）
+└── game/                    # 游戏逻辑
+    ├── snake.h              # SnakeState, random_apple_pos
+    └── snake_render.h       # Snake_Block / Snake_Body（蛇身精灵渲染）
 ```
 
 ### 单线程主循环（SceneManager::run）
@@ -85,20 +89,24 @@ void on_inputevent(InputEvent& event) override {
 
 ```cpp
 namespace Global {
-    int  player1Score, player2Score;
-    int  appleX, appleY;
-    int  scene;   // SceneId 的 int 值
-    bool should_quit;
+    bool should_quit = false;
 
-    int  getScore(int player);
-    void setScore(int player, int score);
-    int  addScore(int player, int points);
-    void setApplePosition(int x, int y);
-    int  getAppleX(), getAppleY();
-    void setScene(int s);
-    int  getScene();
+    int  last_score_player1 = 0;          // 玩家 1 最终得分
+    int  last_score_player2 = 0;          // 玩家 2 最终得分
+
+    enum class GameOverReason {
+        NONE,
+        PLAYER1_ON_WALL,   PLAYER2_ON_WALL,
+        PLAYER1_ON_SELF,   PLAYER2_ON_SELF,
+        PLAYER1_ON_PLAYER2, PLAYER2_ON_PLAYER1,
+        PLAYER1_STARVED,   PLAYER2_STARVED,
+        BOTH_STARVED,
+    };
+    GameOverReason last_game_over_reason = GameOverReason::NONE;
+
     void request_quit();
     bool is_quit_requested();
+    void reset();
 }
 ```
 
@@ -106,8 +114,9 @@ namespace Global {
 
 ```cpp
 const auto &cfg = game_config();
-cfg.allowAcceleration;       // 是否加速
-cfg.toroidalSpace;           // 环面地图（穿墙）
-cfg.allowThroughTeammates;   // 是否穿过对方
-cfg.increasing_difficulty;   // 难度递增系数
+cfg.allowAcceleration;        // 是否加速
+cfg.toroidalSpace;            // 环面地图（穿墙）
+cfg.allowThroughTeammates;    // 是否穿过对方
+cfg.speed_factor;             // 整体速度倍率（最小 0.1）
+cfg.increasing_difficulty;    // 难度递增系数（0 = 恒定速度）
 ```

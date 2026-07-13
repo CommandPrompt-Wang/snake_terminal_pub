@@ -2,7 +2,7 @@
 #include "scene/scene.h"
 #include "scene/game_scene.h"
 #include "scene/menu_scene.h"
-#include "game/snake.h"   // for Scene enum values
+#include "utility.h"
 #include "event/input_event.h"
 #include "event/quit_event.h"
 #include "raylib.h"

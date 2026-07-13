@@ -49,13 +49,18 @@ void GameScene::init_snake(SnakeState &s, int startX, int startY, Direction dir,
 bool GameScene::tick_player(SnakeState &p, int player, const SnakeState &other, Position &apple) {
     Position head = next_head(p);
 
-    // wall collision
-    if(game_config().toroidalSpace) {
+    // wall collision / wrap-around
+    if (!game_config().toroidalSpace) {
         if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H) {
             if (player == 1) Global::last_game_over_reason = Global::GameOverReason::PLAYER1_ON_WALL;
             else if (player == 2) Global::last_game_over_reason = Global::GameOverReason::PLAYER2_ON_WALL;
             return false;
         }
+    } else {
+        if (head.x < 0) head.x = GRID_W - 1;
+        else if (head.x >= GRID_W) head.x = 0;
+        if (head.y < 0) head.y = GRID_H - 1;
+        else if (head.y >= GRID_H) head.y = 0;
     }
 
     // self collision

@@ -1,34 +1,7 @@
 #pragma once
 #include <deque>
 #include <random>
-#include "global.h"
-
-constexpr int GRID_W = 20;
-constexpr int GRID_H = 20;
-
-// O--------> x+
-// |
-// |
-// v y+
-struct Position {
-    int x, y;
-    bool operator==(const Position &o) const { return x == o.x && y == o.y; }
-};
-
-enum class SceneId {
-    MENU,
-    CONFIG,
-    GAME,
-    DIE,
-};
-
-// -- Direction enum (replaces old Event::UP/DOWN/LEFT/RIGHT) --
-enum class Direction {
-    UP,
-    DOWN,
-    LEFT,
-    RIGHT,
-};
+#include "utility.h"
 
 struct SnakeState {
     std::deque<Position> body;

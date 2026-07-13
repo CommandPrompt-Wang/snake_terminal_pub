@@ -3,6 +3,7 @@
 #include "render/sprite.h"
 #include "render/render.h"
 #include "game/snake.h"
+#include "config/config.h"
 #include <string>
 #include <array>
 #include <vector>
@@ -16,6 +17,16 @@ inline Vector2 operator + (const Vector2& a,const Vector2& b)
 inline bool operator == (const Vector2& a,const Vector2& b)
 {
     return abs(a.x - b.x) < eps && abs(a.y - b.y) < eps;
+}
+
+// 在环形空间中检查 (center + offset) 是否等于 candidate（考虑边界卷绕）
+inline bool is_toroidal_neighbor(const Vector2& center, const Vector2& candidate,
+                                 int gridW, int gridH, float dx, float dy) {
+    int cx = (int)center.x, cy = (int)center.y;
+    int nx = (int)candidate.x, ny = (int)candidate.y;
+    int ex = (cx + (int)dx + gridW) % gridW;
+    int ey = (cy + (int)dy + gridH) % gridH;
+    return nx == ex && ny == ey;
 }
 
 class Snake_Block : public Basic_Render_Class
@@ -47,20 +58,23 @@ public:
     Snake_Block(const Snake_Block&) = delete;
     Snake_Block& operator=(const Snake_Block&) = delete;
 
-    void set_status (Snake_Block *pre, Snake_Block *nxt, bool speed_up = false)
+    void set_status (Snake_Block *pre, Snake_Block *nxt, bool speed_up = false, bool toroidal = false)
     {
         side_status[0] = side_status[1] = side_status[2] = side_status[3] = 0;
         fill.set_hide(0);this->speed_up = speed_up;
 
-        if(pre != nullptr)for (int i = 0;i < 4;i++)
-        {
-            side_status[i] |= (pre->pos == pos + mv[i]);
-        }
+        auto check_neighbor = [&](const Snake_Block *neighbor, int i) {
+            if (toroidal)
+                return is_toroidal_neighbor(pos, neighbor->pos, GRID_W, GRID_H, mv[i].x, mv[i].y);
+            else
+                return neighbor->pos == pos + mv[i];
+        };
 
-        if (nxt != nullptr)for (int i = 0;i < 4;i++)
-        {
-            side_status[i] |= (nxt->pos == pos + mv[i]);
-        }
+        if(pre != nullptr) for (int i = 0; i < 4; i++)
+            side_status[i] |= check_neighbor(pre, i);
+
+        if (nxt != nullptr) for (int i = 0; i < 4; i++)
+            side_status[i] |= check_neighbor(nxt, i);
     }
     const int get_status()
     {
@@ -222,7 +236,7 @@ public:
             Snake_Block *pre = nullptr, *nxt = nullptr;
             if (i - 1 >= 0) pre = &body[i - 1];
             if (i + 1 <= body.size() - 1) nxt = &body[i + 1];
-            body[i].set_status(pre, nxt);
+            body[i].set_status(pre, nxt, false, game_config().toroidalSpace);
             body[i].update();
         }
     }

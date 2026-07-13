@@ -3,7 +3,8 @@
 #include <string>
 
 #include "scene/scene.h"
-#include "game/snake.h"
+#include "utility.h"
+#include "global.h"
 #include "raylib.h"
 
 class EndScene : public Scene {

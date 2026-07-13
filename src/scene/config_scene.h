@@ -1,7 +1,7 @@
 #pragma once
 
 #include "scene/scene.h"
-#include "game/snake.h"
+#include "utility.h"
 #include "raylib.h"
 
 class ConfigScene : public Scene {

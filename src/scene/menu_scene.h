@@ -1,6 +1,6 @@
 #pragma once
 #include "scene/scene.h"
-#include "game/snake.h"
+#include "utility.h"
 
 // -- MenuScene --------------------------------------
 // Menu scene: displays title, option list with up/down navigation.
