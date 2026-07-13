@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <cmath>
 #include <array>
+#include <iostream>
 
 // -- static helpers --------------------------------
 
@@ -73,38 +74,6 @@ bool GameScene::tick_player(SnakeState &p, int /*player*/, const SnakeState &oth
     return true;
 }
 
-// -- rebuild snake block sprites from current SnakeState --
-void GameScene::rebuild_snake_sprites() {
-    draw_list_.clear();
-    snake_blocks_.clear();
-
-    auto add_snake = [&](const SnakeState &s, int playerId) {
-        if (s.body.empty()) return;
-        std::vector<Snake_Block*> blocks;
-        for (size_t i = 0; i < s.body.size(); ++i) {
-            auto blk = std::make_unique<Snake_Block>(
-                playerId,
-                Vector2{(float)(s.body[i].x * CELL_SIZE + OFFSET_X),
-                        (float)(s.body[i].y * CELL_SIZE + OFFSET_Y)}
-            );
-            if (i == 0) blk->set_dir(s.curDir);  // head direction
-            blocks.push_back(blk.get());
-            snake_blocks_.push_back(std::move(blk));
-        }
-        for (size_t i = 0; i < blocks.size(); ++i) {
-            Snake_Block *pre = (i == 0) ? nullptr : blocks[i - 1];
-            Snake_Block *nxt = (i + 1 < blocks.size()) ? blocks[i + 1] : nullptr;
-            blocks[i]->set_status(pre, nxt, false);
-            blocks[i]->set_pos(Vector2{(float)(s.body[i].x * CELL_SIZE + OFFSET_X),
-                                        (float)(s.body[i].y * CELL_SIZE + OFFSET_Y)});
-            draw_list_.push_back(blocks[i]);
-        }
-    };
-
-    add_snake(p1_, 1);
-    add_snake(p2_, 2);
-}
-
 // -- consume buffered direction into actual snake dir --
 void GameScene::consume_pending_dir() {
     if (has_pending_dir1_ && !is_opposite(p1_.curDir, pending_dir1_)) {
@@ -122,6 +91,8 @@ void GameScene::consume_pending_dir() {
 GameScene::GameScene()  = default;
 GameScene::~GameScene() = default;
 
+Snake_Body snake_body_1,snake_body_2;
+
 void GameScene::on_enter() {
     finished_ = false;
     next_scene_id_ = static_cast<int>(SceneId::DIE);
@@ -136,12 +107,15 @@ void GameScene::on_enter() {
     speed1_ = 1; speed2_ = 1;
 
     last_tick_ = Clock::now();
-    rebuild_snake_sprites();
+    
+    snake_body_1 = Snake_Body(&p1_, 1);
+    draw_list_.push_back(&snake_body_1);
+    snake_body_2 = Snake_Body(&p2_, 2);
+    draw_list_.push_back(&snake_body_2);
 }
 
 void GameScene::on_exit() {
     draw_list_.clear();
-    snake_blocks_.clear();
 }
 
 // -- Event handling ---------------------------------
@@ -174,7 +148,7 @@ void GameScene::on_inputevent(InputEvent& event) {
 
 void GameScene::update(float dt) {
     consume_pending_dir();
-
+    std::cerr << "##################begin to update\n";
     // speed boost
     if (game_config().allowAcceleration) {
         int s1 = (IsKeyDown(KEY_W) || IsKeyDown(KEY_S) || IsKeyDown(KEY_A) || IsKeyDown(KEY_D)) ? 2 : 1;
@@ -201,15 +175,15 @@ void GameScene::update(float dt) {
         bool alive2 = tick_player(p2_, 2, p1_, apple_);
 
         // apple position already in apple_ member
-        rebuild_snake_sprites();
 
         if (!alive1 || !alive2) {
             finished_ = true;
             finished_ = true;
         }
     }
-
+    std::cerr << "##################begin to draw update\n";
     draw_list_.update();
+    std::cerr << "##################update finished\n";
 }
 
 void GameScene::render() {

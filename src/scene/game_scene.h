@@ -45,7 +45,6 @@ private:
     static bool on_body(const std::deque<Position> &body, const Position &p, int skipFront = 0);
     void init_snake(SnakeState &s, int startX, int startY, Direction dir, int len);
     bool tick_player(SnakeState &p, int player, const SnakeState &other, Position &apple);
-    void rebuild_snake_sprites();
     void consume_pending_dir();
 
     // -- state --
