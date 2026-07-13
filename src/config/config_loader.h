@@ -1,5 +1,6 @@
 #pragma once
 #include <fstream>
+#include <iomanip>
 #include <string>
 #include "config/config.h"
 
@@ -38,14 +39,15 @@ static bool load_config(const std::string &path) {
         trim(key);
         trim(val);
 
-        bool b = (val == "1" || val == "true" || val == "yes");
-        int  n = 0;
-        try { n = std::stoi(val); } catch (...) {}
+        bool  b = (val == "1" || val == "true" || val == "yes");
+        float f = 0.0f;
+        try { f = std::stof(val); } catch (...) {}
 
-        if (key == "allow_acceleration")        cfg.allowAcceleration      = b;
-        if (key == "toroidal_space")            cfg.toroidalSpace          = b;
-        if (key == "allow_through_teammates")   cfg.allowThroughTeammates  = b;
-        if (key == "increasing_difficulty")     cfg.increasing_difficulty  = n;
+        if (key == "allow_acceleration")        cfg.allowAcceleration        = b;
+        if (key == "toroidal_space")            cfg.toroidalSpace            = b;
+        if (key == "allow_through_teammates")   cfg.allowThroughTeammates    = b;
+        if (key == "speed_factor")              cfg.speed_factor             = std::max(0.1f, f);
+        if (key == "increasing_difficulty")     cfg.increasing_difficulty    = std::max(0.0f, f);
     }
     return true;
 }
@@ -59,5 +61,6 @@ static void save_config(const std::string &path) {
     f << "allow_acceleration      = " << (cfg.allowAcceleration      ? "true" : "false") << "\n";
     f << "toroidal_space          = " << (cfg.toroidalSpace          ? "true" : "false") << "\n";
     f << "allow_through_teammates = " << (cfg.allowThroughTeammates  ? "true" : "false") << "\n";
-    f << "increasing_difficulty   = " << cfg.increasing_difficulty << "\n";
+    f << "speed_factor            = " << std::fixed << std::setprecision(1) << cfg.speed_factor << "\n";
+    f << "increasing_difficulty   = " << std::fixed << std::setprecision(1) << cfg.increasing_difficulty << "\n";
 }

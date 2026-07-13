@@ -145,10 +145,16 @@ void GameScene::on_inputevent(InputEvent& event) {
         //     event.consume();
         //     break;
         // default: break;
+        case KEY_P:
+            pause = !pause;
+            event.consume();
+            break;
     }
 }
 
 void GameScene::update(float dt) {
+    if (pause) return;
+    
     consume_pending_dir();
     // speed boost
     if (game_config().allowAcceleration) {
@@ -166,7 +172,8 @@ void GameScene::update(float dt) {
         double k = game_config().increasing_difficulty;
         diffMult = 1.0 + 2.0 * std::log10((k * highScore) / 9.0 + 1.0);
     }
-    double tickMs = 500.0 / (diffMult * std::max(p1_.curSpeed, p2_.curSpeed));
+    float spd = std::max(0.1f, game_config().speed_factor);
+    double tickMs = 500.0 / (diffMult * spd * std::max(p1_.curSpeed, p2_.curSpeed));
     auto now = Clock::now();
     auto interval = std::chrono::milliseconds(static_cast<int>(tickMs));
     if (now - last_tick_ >= interval) {

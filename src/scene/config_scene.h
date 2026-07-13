@@ -18,4 +18,4 @@ public:
     int get_next_scene_id() const override;
     const char* get_name() const override { return "ConfigScene"; }
 
-}
+};

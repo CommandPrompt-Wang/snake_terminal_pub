@@ -55,6 +55,8 @@ private:
     bool finished_ = false;
     int next_scene_id_ = static_cast<int>(SceneId::DIE);
 
+    bool pause = false;
+
     // Direction buffer (set by on_inputevent, consumed in update)
     // Using optional-like flags for "no pending direction"
     bool has_pending_dir1_ = false;
@@ -71,7 +73,7 @@ private:
     std::vector<std::unique_ptr<Snake_Block>> snake_blocks_;
 
     // cell size for rendering
-    static constexpr int CELL_SIZE = 30;
-    static constexpr int OFFSET_X = 20;
-    static constexpr int OFFSET_Y = 20;
+    static constexpr int CELL_SIZE = 32;
+    static constexpr int OFFSET_X = 0;
+    static constexpr int OFFSET_Y = 200;
 };
