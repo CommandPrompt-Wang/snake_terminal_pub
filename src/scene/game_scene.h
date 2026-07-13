@@ -72,6 +72,6 @@ private:
 
     // cell size for rendering
     static constexpr int CELL_SIZE = 30;
-    static constexpr int OFFSET_X = 100;
+    static constexpr int OFFSET_X = 20;
     static constexpr int OFFSET_Y = 20;
 };

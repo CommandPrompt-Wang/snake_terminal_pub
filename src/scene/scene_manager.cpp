@@ -1,4 +1,5 @@
 #include "scene/scene_manager.h"
+#include "scene/end_scene.h"
 #include "global.h"
 #include "event/input_event.h"
 #include "event/quit_event.h"
@@ -14,7 +15,7 @@ SceneManager::SceneManager() {
     scenes_[static_cast<int>(SceneId::MENU)] = std::make_unique<MenuScene>();
     scenes_[static_cast<int>(SceneId::CONFIG)] = nullptr;  // not implemented yet
     scenes_[static_cast<int>(SceneId::GAME)]  = std::make_unique<GameScene>();
-    scenes_[static_cast<int>(SceneId::DIE)]   = nullptr;   // will fallback to MENU
+    scenes_[static_cast<int>(SceneId::DIE)]   = std::make_unique<EndScene>();
 
     current_scene_ = static_cast<int>(SceneId::MENU);
     last_frame_time_ = Clock::now();
@@ -44,7 +45,7 @@ void SceneManager::dispatch_input_events() {
     static const int keys_to_check[] = {
         KEY_W, KEY_S, KEY_A, KEY_D,
         KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
-        KEY_SPACE, KEY_ESCAPE, KEY_Q,
+        KEY_SPACE, KEY_ESCAPE, KEY_Q, KEY_ENTER,
     };
 
     for (int key : keys_to_check) {
@@ -63,7 +64,7 @@ void SceneManager::dispatch_input_events() {
 void SceneManager::run() {
     // -- Initialize raylib window --
     // This is the only place in the entire program where a window is created
-    InitWindow(800, 600, "Snake Terminal");
+    InitWindow(640, 840, "Snake Terminal");
     SetTargetFPS(60);
 
     // Start the initial scene

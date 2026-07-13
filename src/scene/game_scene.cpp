@@ -176,7 +176,8 @@ void GameScene::update(float dt) {
         // apple position already in apple_ member
 
         if (!alive1 || !alive2) {
-            finished_ = true;
+            Global::last_score_player1 = std::max(0, (int)p1_.body.size() - 3);
+            Global::last_score_player2 = std::max(0, (int)p2_.body.size() - 3);
             finished_ = true;
         }
     }
