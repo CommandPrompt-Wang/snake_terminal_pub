@@ -2,8 +2,10 @@
 
 #include "raylib.h"
 #include "render/render.h"
+#include "render/draw_list.h"
 #include <string>
 #include<iostream>
+
 using std::cerr;
 
 // 基于 raylib 的简单 Sprite
@@ -12,7 +14,7 @@ class Sprite : public Basic_Render_Class
 {
 public:
     // Load Image from file;
-    explicit Sprite(const std::string& path):imagepath(path){}
+    explicit Sprite(const std::string& path,int layer = 0):imagepath(path),layer(layer){}
 
     ~Sprite()
     {
@@ -102,6 +104,15 @@ public:
     void set_offset(Vector2 o)
     {
         offset = o;
+    }
+
+    int get_layer() const
+    {
+        return layer;
+    }
+    void set_layer(int layer)
+    {
+        this->layer = layer;
     }
 
     // Scale, (1,1) is original size
@@ -290,8 +301,7 @@ public:
             fw * scale.x,
             fh * scale.y,
         };
-
-        DrawTexturePro(texture, src, dest, Vector2{0, 0}, 0.0f, WHITE);
+        push_draw(texture, src, dest, Vector2{0, 0}, 0.0f, WHITE,layer);
     }
 
 private:
@@ -306,10 +316,12 @@ private:
     Image image{};            // Sprite sheet source image, loaded at construction
     Texture2D texture{};      // Current frame texture, updated only in update()
     int texture_frame = -1;   // Frame index matching current texture; -1 = not yet generated
-
+    
     int vframes = 1;  // Texture rows
     int hframes = 1;  // Texture columns
     int frame = 0;    // Logical current frame
+    
+    int layer = 0;//layer用于表示图层优先级（越大越优先）。若layer相同则渲染顺序不保证。
 
     float frame_process = 0.0f;  // 当前帧已播放时间
     float during_time = 0.0f;    // 一整轮动画时长（秒）

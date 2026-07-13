@@ -31,7 +31,15 @@ public:
         side[2].set_flip_v(1);speedup[2].set_flip_v(1);
         side[3].set_flip_h(1);speedup[3].set_flip_h(1);
     }
-    ~Snake_Block () = default;
+    ~Snake_Block ()
+    {
+        fill.set_layer(1);
+        for (int i = 0;i < 4;i++)
+        {
+            side[i].set_layer(1);
+            speedup[i].set_layer(2);
+        }
+    }
 
     // Move-only (Sprite 是 move-only 的)
     Snake_Block(Snake_Block&&) = default;
@@ -54,6 +62,12 @@ public:
             side_status[i] |= (nxt->pos == pos + mv[i]);
         }
     }
+    const int get_status()
+    {
+        int sta = 0;
+        for(int i = 0;i < 4;i++)sta = (sta << 1) | (side_status[i]);
+        return sta;
+    }
     const Vector2 get_pos(){return pos;}
     void set_scale(Vector2 scale)
     {
@@ -67,9 +81,9 @@ public:
     {
         this->pos = pos;
         Vector2 draw_position = Vector2{32 * pos.x, 32 * pos.y} + Vector2{0, 200};
-        fill.set_pos(draw_position);
         side[0].set_pos(draw_position);side[1].set_pos(draw_position);side[2].set_pos(draw_position);side[3].set_pos(draw_position);
         speedup[0].set_pos(draw_position);speedup[1].set_pos(draw_position);speedup[2].set_pos(draw_position);speedup[3].set_pos(draw_position);
+        fill.set_pos(draw_position);
     }
     void set_pos (int x, int y)
     {
@@ -78,26 +92,30 @@ public:
 
     void draw ()
     {
+        side[0].draw();side[1].draw();side[2].draw();side[3].draw();
+        speedup[0].draw();speedup[1].draw();speedup[2].draw();speedup[3].draw();
         fill.draw();
+    }
+    void update ()
+    {
         for(int i = 0;i < 4;i++)
         {
             if (side_status[i] == 0)
             {
                 if (speed_up)
                 {
-                    speedup[i].set_hide(0);
-                    speedup[i].update();speedup[i].draw();
+                    speedup[i].set_hide(0);side[i].set_hide(1);
                 }
                 else
                 {
-                    side[i].set_hide(0);
-                    side[i].update();side[i].draw();
+                    side[i].set_hide(0);speedup[i].set_hide(1);
                 }
             }
+            else
+            {
+                speedup[i].set_hide(1);side[i].set_hide(1);
+            }
         }
-    }
-    void update ()
-    {
         side[0].update();side[1].update();side[2].update();side[3].update();
         speedup[0].update();speedup[1].update();speedup[2].update();speedup[3].update();
         fill.update();
@@ -137,6 +155,8 @@ private:
 public:
     Snake_Body (SnakeState* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid)
     {
+        head[0].set_layer(3);
+        head[1].set_layer(3);
     }
 
     // Move-only (Sprite 是 move-only 的)
@@ -159,32 +179,30 @@ public:
             case Direction::UP :
             {
                 head[0].set_flip_v(0);head[0].set_hide(0);
-                head[0].update();
                 head[1].set_hide(1);
                 break;
             }
             case Direction::RIGHT :
             {
                 head[1].set_flip_h(0);head[1].set_hide(0);
-                head[1].update();
                 head[0].set_hide(1);
                 break;
             }
             case Direction::DOWN :
             {
                 head[0].set_flip_v(1);head[0].set_hide(0);
-                head[0].update();
                 head[1].set_hide(1);
                 break;
             }
             case Direction::LEFT :
             {
                 head[1].set_flip_h(1);head[1].set_hide(0);
-                head[1].update();
                 head[0].set_hide(1);
                 break;
             }
         }
+        head[0].update();
+        head[1].update();
         while (body.size() < snake->body.size())
         {
             body.emplace_back(playerid, (Vector2){0, 0});
@@ -205,6 +223,7 @@ public:
             if (i - 1 >= 0) pre = &body[i - 1];
             if (i + 1 <= body.size() - 1) nxt = &body[i + 1];
             body[i].set_status(pre, nxt);
+            body[i].update();
         }
     }
     void draw ()
@@ -215,9 +234,12 @@ public:
     }
     void print_pos()
     {
+        std::cerr << "snake : " << playerid << '\n';
+        std::cerr << "head0 = " << head[0].get_hide() << " head1 = " << head[1].get_hide() << '\n';
         for(auto &i : body)
         {
             std::cerr << "##############(" << i.get_pos().x << ", " << i.get_pos().y << ")\n";
+            std::cerr << "###############" << i.get_status() << '\n';
         }
     }
     ~Snake_Body ()
