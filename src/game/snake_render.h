@@ -17,8 +17,9 @@ inline bool operator == (const Vector2& a,const Vector2& b)
 class Snake_Block : public Basic_Render_Class
 {
 public:
-    Snake_Block (int playerid = 0, Vector2 pos = {0,0}, Vector2 offset = {0,0})
+    Snake_Block (int playerid = 0, Vector2 pos = {0,0})
     :
+    playerid(playerid),pos(pos),
     side{Sprite("resources/up_side.png"),Sprite("resources/right_side.png"),Sprite("resources/up_side.png"),Sprite("resources/right_side.png")},
     speedup{Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png"),Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png")},
     fill(Sprite("resources/player" + std::to_string(playerid) + "fill.png"))
@@ -157,17 +158,28 @@ class Snake_Body : public Basic_Render_Class
 private:
     std::vector<Snake_Block> body;
     float frame_process;
-    const float speedup_advance_interval;
+    inline static const float speedup_time = 0.6;//加速向后传递的时间
+    SnakeState* snake;
+    int playerid;
 public:
-    void update ()
-    {}
-    void draw ()
+    Snake_Body (SnakeState* snake,int playerid):snake(snake),playerid(playerid)
     {
+        frame_process = 0;
     }
-    void sync_position()
+    void update ()
     {
-        //如果蛇体位置更改
+        while(body.size() < (*snake).body.size())
         {
+            body.emplace_back(playerid, (Vector2){0, 0});
+        }
+        for(int i = 0;i < body.size();i++)
+        {
+            Snake_Block *pre = nullptr, *nxt = nullptr;
+            if(i != 0)pre = &body[i - 1];
+            if(i != body.size() - 1)nxt = &body[i + 1];
+            body[i].set_status(pre, nxt);
         }
     }
+    void draw ()
+    {}
 };

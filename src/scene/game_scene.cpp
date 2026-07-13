@@ -84,8 +84,7 @@ void GameScene::rebuild_snake_sprites() {
             auto blk = std::make_unique<Snake_Block>(
                 playerId,
                 Vector2{(float)(s.body[i].x * CELL_SIZE + OFFSET_X),
-                        (float)(s.body[i].y * CELL_SIZE + OFFSET_Y)},
-                Vector2{0, 0}
+                        (float)(s.body[i].y * CELL_SIZE + OFFSET_Y)}
             );
             if (i == 0) blk->set_dir(s.curDir);  // head direction
             blocks.push_back(blk.get());

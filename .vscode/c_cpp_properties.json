@@ -3,10 +3,9 @@
         {
             "name": "Mac",
             "includePath": [
-                "${workspaceFolder}/src",
-                "/opt/homebrew/include",
-                "/opt/homebrew/opt/raylib/include",
-                "/usr/local/include"
+                "/opt/homebrew/Cellar/raylib/6.0/**",
+                "${workspaceFolder}/**",
+                "${workspaceFolder}/build/third_party/raylib/include/**"
             ],
             "defines": [
                 "PLATFORM_DESKTOP",
@@ -19,7 +18,9 @@
             "cStandard": "c17",
             "cppStandard": "c++17",
             "intelliSenseMode": "macos-clang-arm64",
-            "compileCommands": "${workspaceFolder}/build/compile_commands.json"
+            "compileCommands": [
+                "${workspaceFolder}/build/compile_commands.json"
+            ]
         }
     ],
     "version": 4

@@ -14,7 +14,7 @@ int main() {
     mgr.run();
 
     // save config on clean exit
-    render_thread();
+    // render_thread();
     save_config("snake.cfg");
 
     std::cout << "Goodbye!" << std::endl;
