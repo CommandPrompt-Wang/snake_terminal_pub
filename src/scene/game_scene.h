@@ -31,7 +31,7 @@ public:
     void render() override;
 
     bool is_finished() const override { return finished_; }
-    int get_next_scene_id() const override { return static_cast<int>(SceneId::DIE); }
+    int get_next_scene_id() const override { return next_scene_id_; }
     const char* get_name() const override { return "GameScene"; }
 
 protected:
@@ -54,6 +54,7 @@ private:
     int score1_ = 0, score2_ = 0;
     int speed1_ = 1, speed2_ = 1;
     bool finished_ = false;
+    int next_scene_id_ = static_cast<int>(SceneId::DIE);
 
     // Direction buffer (set by on_inputevent, consumed in update)
     // Using optional-like flags for "no pending direction"

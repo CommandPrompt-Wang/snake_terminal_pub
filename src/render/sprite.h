@@ -4,15 +4,9 @@
 #include "render/render.h"
 #include <string>
 
-<<<<<<< HEAD
-// Simple Sprite based on raylib
-// Image is loaded at construction; Texture2D is updated only when update() detects a new frame; Unload at destruction
-class Sprite : Basic_Render_Class
-=======
 // 基于 raylib 的简单 Sprite
 // Image 在构造时载入；Texture2D 仅在 update 检测到新帧时更新；析构时 Unload
 class Sprite : public Basic_Render_Class
->>>>>>> 138fdf4b225d59be8969a13a9c18a2e8c0d8f09d
 {
 public:
     // Load Image from file;
@@ -21,7 +15,6 @@ public:
         image = LoadImage(path.c_str());
     }
 
-<<<<<<< HEAD
     // Copy Image; caller may UnloadImage separately
     explicit Sprite(Image src = {})
     {
@@ -31,8 +24,6 @@ public:
         }
     }
 
-=======
->>>>>>> 138fdf4b225d59be8969a13a9c18a2e8c0d8f09d
     ~Sprite()
     {
         if (texture.id != 0)
@@ -45,10 +36,7 @@ public:
         }
     }
 
-<<<<<<< HEAD
     // ---------- Position ----------
-=======
->>>>>>> 138fdf4b225d59be8969a13a9c18a2e8c0d8f09d
     Vector2 get_pos() const
     {
         return pos;
@@ -281,15 +269,9 @@ private:
     int hframes = 1;  // Texture columns
     int frame = 0;    // Logical current frame
 
-<<<<<<< HEAD
-    float frame_process = 0.0f;  // Elapsed time for current frame
-    float during_time = 0.0f;    // Duration of one full animation cycle (seconds)
-    bool stopped = true;         // Whether paused
-=======
     float frame_process = 0.0f;  // 当前帧已播放时间
     float during_time = 0.0f;    // 一整轮动画时长（秒）
     bool stopped = false;         // 是否暂停
->>>>>>> 138fdf4b225d59be8969a13a9c18a2e8c0d8f09d
 
     bool flip_h = false;  // Horizontal flip
     bool flip_v = false;  // Vertical flip

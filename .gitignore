@@ -7,10 +7,13 @@ compile_commands.json
 *.a
 *.dylib
 .idea/
-.vscode/*
+.vscode/
 !.vscode/c_cpp_properties.json
 !.vscode/settings.json
 cmake-build-*/
+
+# 第三方库（内嵌 git 仓库，单独管理）
+third_party/raylib/
 
 # CMake 根目录生成物
 CMakeCache.txt
