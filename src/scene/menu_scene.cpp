@@ -1,6 +1,5 @@
 #include "scene/menu_scene.h"
 #include "raylib.h"
-#include <iostream>
 
 void MenuScene::on_enter() {
     finished_ = false;

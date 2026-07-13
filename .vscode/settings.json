@@ -3,5 +3,6 @@
     "C_Cpp.default.configurationProvider": "",
     "clangd.arguments": [
         "--compile-commands-dir=${workspaceFolder}/build"
-    ]
+    ],
+    "makefile.configureOnOpen": true
 }

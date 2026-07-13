@@ -51,6 +51,7 @@ void SceneManager::dispatch_input_events() {
         if (IsKeyPressed(key)) {
             InputEvent ev(InputEvent::Type::KeyPress, key, false);
             current->handle_event(ev);
+            // If the scene consumed the event, continue to next
         }
         if (IsKeyReleased(key)) {
             InputEvent ev(InputEvent::Type::KeyRelease, key, false);
