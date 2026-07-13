@@ -1,7 +1,7 @@
 #pragma once
 
 #include "raylib.h"
-#include "render.h"
+#include "render/render.h"
 #include <string>
 
 // 基于 raylib 的简单 Sprite
@@ -9,7 +9,7 @@
 class Sprite : public Basic_Render_Class
 {
 public:
-    // 从文件加载 Image；
+    // Load Image from file;
     explicit Sprite(const std::string& path)
     {
         image = LoadImage(path.c_str());
@@ -45,7 +45,7 @@ public:
         hide = h;
     }
 
-    // 实际绘制位置 = pos + offset
+    // Actual draw position = pos + offset
     Vector2 get_offset() const
     {
         return offset;
@@ -55,7 +55,7 @@ public:
         offset = o;
     }
 
-    // 缩放，(1,1) 为原始大小
+    // Scale, (1,1) is original size
     Vector2 get_scale() const
     {
         return scale;
@@ -65,7 +65,7 @@ public:
         scale = s;
     }
 
-    // ---------- 翻转 ----------
+    // ---------- Flip ----------
     bool is_flipped_h() const
     {
         return flip_h;
@@ -84,8 +84,8 @@ public:
         flip_v = f;
     }
 
-    // ---------- 精灵表（简单行列切帧） ----------
-    // hframes：列数；vframes：行数
+    // ---------- Sprite sheet (simple row/column frame slicing) ----------
+    // hframes: columns; vframes: rows
     int get_hframes() const
     {
         return hframes;
@@ -99,7 +99,7 @@ public:
             {
                 frame = 0;
             }
-            texture_frame = -1;  // 强制下次 update 重建纹理
+            texture_frame = -1;  // force texture rebuild on next update
         }
     }
 
@@ -120,7 +120,7 @@ public:
         }
     }
 
-    // 当前帧：从左到右、从上到下编号（真正换贴图在 update 里做）
+    // Current frame: numbered left-to-right, top-to-bottom (actual texture swap happens in update)
     int get_frame() const
     {
         return frame;
@@ -133,7 +133,7 @@ public:
         }
     }
 
-    // 帧坐标 (列, 行)
+    // Frame coordinates (column, row)
     Vector2 get_frame_coords() const
     {
         return Vector2{
@@ -152,8 +152,8 @@ public:
         }
     }
 
-    // ---------- 动画 ----------
-    // during_time：播完一整轮所需秒数；<=0 不自动播放
+    // ---------- Animation ----------
+    // during_time: seconds to complete one full cycle; <=0 means no auto-play
     float get_during_time() const
     {
         return during_time;
@@ -182,7 +182,7 @@ public:
         frame_process = 0.0f;
     }
 
-    // 推进动画；若进入新帧则重建 texture
+    // Advance animation; rebuild texture if entering a new frame
     void update()
     {
 
@@ -201,7 +201,7 @@ public:
             }
         }
 
-        // 仅在帧变化（含首次）时更新 texture
+        // Only update texture when frame changes (including first time)
         if (frame != texture_frame)
         {
             refresh_texture();
@@ -209,7 +209,7 @@ public:
         }
     }
 
-    // ---------- 绘制 ----------
+    // ---------- Draw ----------
     void draw()
     {
         if (hide) return;
@@ -225,7 +225,7 @@ public:
             (float)texture.height,
         };
 
-        // raylib：source 宽/高为负表示翻转
+        // raylib: negative source width/height indicates flip
         if (flip_h)
         {
             src.x += src.width;
@@ -251,28 +251,28 @@ public:
     }
 
 private:
-    Image image{};            // 精灵表原图，构造时载入
-    Texture2D texture{};      // 当前帧纹理，仅在 update 中更新
-    int texture_frame = -1;   // 当前 texture 对应的帧；-1 表示尚未生成
+    Image image{};            // Sprite sheet source image, loaded at construction
+    Texture2D texture{};      // Current frame texture, updated only in update()
+    int texture_frame = -1;   // Frame index matching current texture; -1 = not yet generated
 
-    int vframes = 1;  // 纹理行数
-    int hframes = 1;  // 纹理列数
-    int frame = 0;    // 逻辑当前帧
+    int vframes = 1;  // Texture rows
+    int hframes = 1;  // Texture columns
+    int frame = 0;    // Logical current frame
 
     float frame_process = 0.0f;  // 当前帧已播放时间
     float during_time = 0.0f;    // 一整轮动画时长（秒）
     bool stopped = false;         // 是否暂停
 
-    bool flip_h = false;  // 水平翻转
-    bool flip_v = false;  // 垂直翻转
+    bool flip_h = false;  // Horizontal flip
+    bool flip_v = false;  // Vertical flip
 
-    bool hide = false; // 是否隐藏（不渲染）
+    bool hide = false; // Whether hidden (not rendered)
 
-    Vector2 pos{0, 0};     // 场景坐标
-    Vector2 offset{0, 0};  // 绘制偏移，实际位置 = pos + offset
-    Vector2 scale{1, 1};   // 缩放
+    Vector2 pos{0, 0};     // Scene coordinates
+    Vector2 offset{0, 0};  // Draw offset, actual position = pos + offset
+    Vector2 scale{1, 1};   // Scale
 
-    // 按当前 frame 从 image 裁出一帧，重建 texture
+    // Crop one frame from image according to current frame index, rebuild texture
     void refresh_texture()
     {
         if (image.data == nullptr || hframes < 1 || vframes < 1)

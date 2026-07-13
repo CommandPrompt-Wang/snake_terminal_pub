@@ -1,10 +1,9 @@
 #pragma once
 
 #include "raylib.h"
-#include "sprite.h"
-#include "event.h"
-#include "snake_render.h"
-#include "render.h"
+#include "render/sprite.h"
+#include "global.h"
+#include "render/render.h"
 
 #include <list>
 
@@ -65,31 +64,4 @@ public:
     }
 private:
     std::list<DrawEntry> g_draw_list;
-}draw_list;
-
-
-inline Color g_clear_color = RAYWHITE;
-
-void render_thread()//画面帧渲染，作为单独的线程
-{
-    InitWindow(800, 600, "Snake Terminal");
-    SetTargetFPS(60);
-    int cnt = 0;
-    Snake_Block blk = Snake_Block(1, {0,0}, {0,0});
-    draw_list.push_back(&blk);
-    blk.set_scale({2, 2});
-    // Sprite sprite = Sprite("resources/player1fill.png");
-    // sprite.set_pos({0, 0});
-    // sprite.set_scale({2, 2});
-    // draw_list.push_back(&sprite);
-    while(!WindowShouldClose()){
-        //在这里做画面帧的渲染前准备
-        cnt++;
-        blk.set_status(nullptr,nullptr,cnt % 30 <= 10);
-        draw_list.update();
-        BeginDrawing();
-        ClearBackground(g_clear_color);
-        draw_list.draw();
-        EndDrawing();
-    }
-}
+};

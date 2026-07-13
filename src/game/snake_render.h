@@ -1,22 +1,23 @@
 #pragma once
 #include "raylib.h"
-#include "sprite.h"
-#include "render.h"
+#include "render/sprite.h"
+#include "render/render.h"
+#include "game/snake.h"
 #include<string>
 #include<vector>
 
-Vector2 operator + (const Vector2& a,const Vector2& b)
+inline Vector2 operator + (const Vector2& a,const Vector2& b)
 {
     return {a.x + b.x,a.y + b.y};
 }
-bool operator == (const Vector2& a,const Vector2& b)
+inline bool operator == (const Vector2& a,const Vector2& b)
 {
     return a.x == b.x && a.y == b.y;
 }
 class Snake_Block : public Basic_Render_Class
 {
 public:
-    Snake_Block (int playerid = 0, Vector2 pos = {0,0}, Vector2 offset = {0,0})//color = false : player 1; color = true : player 2
+    Snake_Block (int playerid = 0, Vector2 pos = {0,0}, Vector2 offset = {0,0})
     :
     side{Sprite("resources/up_side.png"),Sprite("resources/right_side.png"),Sprite("resources/up_side.png"),Sprite("resources/right_side.png")},
     speedup{Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png"),Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png")},
@@ -29,7 +30,7 @@ public:
     {
     }
 
-    void set_status (Snake_Block *pre, Snake_Block *nxt, bool speed_up = false)//更新边缘显示状态和头部显示状态
+    void set_status (Snake_Block *pre, Snake_Block *nxt, bool speed_up = false)
     {
         side_status[0] = side_status[1] = side_status[2] = side_status[3] = 0;
         fill.set_hide(0);is_head = false;this->speed_up = speed_up;
@@ -60,6 +61,8 @@ public:
         speedup[0].set_scale(scale);speedup[1].set_scale(scale);speedup[2].set_scale(scale);speedup[3].set_scale(scale);
         fill.set_scale(scale);
     }
+
+    void set_dir(Direction d) { dir_ = d; }
     void set_pos (Vector2 pos)
     {
         this->pos = pos;
@@ -73,34 +76,32 @@ public:
         fill.draw();
         if (is_head)
         {
-            Event dir = EventServer::getEvent(playerid, EventType::MOVE);
-            switch (dir)
+            switch (dir_)
             {
-                case Event::UP :
+                case Direction::UP :
                 {
                     head[0].set_flip_v(0);head[0].set_hide(0);
                     head[0].update();head[0].draw();
                     break;
                 }
-                case Event::RIGHT :
+                case Direction::RIGHT :
                 {
                     head[1].set_flip_h(0);head[1].set_hide(0);
                     head[1].update();head[1].draw();
                     break;
                 }
-                case Event::DOWN :
+                case Direction::DOWN :
                 {
                     head[0].set_flip_v(1);head[0].set_hide(0);
                     head[0].update();head[0].draw();
                     break;
                 }
-                case Event::LEFT :
+                case Direction::LEFT :
                 {
                     head[1].set_flip_h(1);head[1].set_hide(0);
                     head[1].update();head[1].draw();
                     break;
                 }
-                default:break;
             }
         }
         for(int i = 0;i < 4;i++)
@@ -134,6 +135,7 @@ private:
 
     inline static Sprite head[2] = {Sprite("resources/up_head.png"),Sprite("resources/right_head.png")};
     bool is_head = false,speed_up = false;
+    Direction dir_ = Direction::DOWN;
 
     Vector2 pos{0, 0};
     Vector2 scale{1, 1};
@@ -150,7 +152,7 @@ private:
     };
 };
 
-class Snake_Body : Basic_Render_Class
+class Snake_Body : public Basic_Render_Class
 {
 private:
     std::vector<Snake_Block> body;
