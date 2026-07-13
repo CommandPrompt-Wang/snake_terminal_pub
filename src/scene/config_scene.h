@@ -25,7 +25,7 @@ private:
     enum class Option {
         ALLOW_ACCELERATION,
         TOROIDAL_SPACE,
-        ALLOW_THROUGH_TEAMMATES,
+        ALLOW_THROUGH_OTHERS,
         SPEED_FACTOR,
         INCREASING_DIFFICULTY,
         BACK,

@@ -71,7 +71,7 @@ bool GameScene::tick_player(SnakeState &p, int player, const SnakeState &other, 
     }
 
     // other-player collision
-    if (!game_config().allowThroughTeammates && !other.body.empty() && on_body(other.body, head)) {
+    if (!game_config().allowThroughOthers && !other.body.empty() && on_body(other.body, head)) {
         if (player == 1) Global::last_game_over_reason = Global::GameOverReason::PLAYER1_ON_PLAYER2;
         else if (player == 2) Global::last_game_over_reason = Global::GameOverReason::PLAYER2_ON_PLAYER1;
         return false;
@@ -174,6 +174,13 @@ void GameScene::on_inputevent(InputEvent& event) {
             pause = !pause;
             event.consume();
             break;
+        case KEY_L:
+            if (pause) {
+                finished_ = true;
+                next_scene_id_ = static_cast<int>(SceneId::DIE);
+                Global::last_game_over_reason = Global::GameOverReason::MANUAL;
+                event.consume();
+            }
     }
 }
 
@@ -261,6 +268,7 @@ void GameScene::render() {
         DrawText("PAUSED", screenW / 2 - MeasureText("PAUSED", 40) / 2, screenH / 2 - 20, 40, GRAY);
         DrawText("Press P to resume", screenW / 2 - MeasureText("Press P to resume", 20) / 2, screenH / 2 + 30, 20, GRAY);
         DrawText("Press ESC to return to menu", screenW / 2 - MeasureText("Press ESC to return to menu", 20) / 2, screenH / 2 + 60, 20, GRAY);
+        DrawText("Press L to manually end the game", screenW / 2 - MeasureText("Press L to manually end the game", 20) / 2, screenH / 2 + 90, 20, GRAY);
     }
 
     DrawFPS(10, 70);

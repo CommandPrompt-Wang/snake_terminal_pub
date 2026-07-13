@@ -17,6 +17,8 @@ namespace Global {
         PLAYER1_STARVED,
         PLAYER2_STARVED,
         BOTH_STARVED,
+        TIMEOUT,
+        MANUAL,
     };
 
     inline GameOverReason last_game_over_reason = GameOverReason::NONE;

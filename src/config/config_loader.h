@@ -9,7 +9,7 @@
 // # snake_terminal config
 // allow_acceleration      = true
 // toroidal_space          = false
-// allow_through_teammates = false
+// allow_through_others = false
 
 static bool load_config(const std::string &path) {
     std::ifstream f(path);
@@ -45,7 +45,7 @@ static bool load_config(const std::string &path) {
 
         if (key == "allow_acceleration")        cfg.allowAcceleration        = b;
         if (key == "toroidal_space")            cfg.toroidalSpace            = b;
-        if (key == "allow_through_teammates")   cfg.allowThroughTeammates    = b;
+        if (key == "allow_through_others")      cfg.allowThroughOthers       = b;
         if (key == "speed_factor")              cfg.speed_factor             = std::max(0.1f, f);
         if (key == "increasing_difficulty")     cfg.increasing_difficulty    = std::max(0.0f, f);
     }
@@ -60,7 +60,7 @@ static void save_config(const std::string &path) {
     f << "# snake_terminal config\n";
     f << "allow_acceleration      = " << (cfg.allowAcceleration      ? "true" : "false") << "\n";
     f << "toroidal_space          = " << (cfg.toroidalSpace          ? "true" : "false") << "\n";
-    f << "allow_through_teammates = " << (cfg.allowThroughTeammates  ? "true" : "false") << "\n";
+    f << "allow_through_others = " << (cfg.allowThroughOthers  ? "true" : "false") << "\n";
     f << "speed_factor            = " << std::fixed << std::setprecision(1) << cfg.speed_factor << "\n";
     f << "increasing_difficulty   = " << std::fixed << std::setprecision(1) << cfg.increasing_difficulty << "\n";
 }

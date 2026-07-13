@@ -44,8 +44,8 @@ void ConfigScene::on_inputevent(InputEvent& event) {
                 case Option::TOROIDAL_SPACE:
                     cfg.toroidalSpace = !cfg.toroidalSpace;
                     break;
-                case Option::ALLOW_THROUGH_TEAMMATES:
-                    cfg.allowThroughTeammates = !cfg.allowThroughTeammates;
+                case Option::ALLOW_THROUGH_OTHERS:
+                    cfg.allowThroughOthers = !cfg.allowThroughOthers;
                     break;
                 case Option::SPEED_FACTOR:
                     cfg.speed_factor = std::max(0.1f, cfg.speed_factor - 0.1f);
@@ -68,8 +68,8 @@ void ConfigScene::on_inputevent(InputEvent& event) {
                 case Option::TOROIDAL_SPACE:
                     cfg.toroidalSpace = !cfg.toroidalSpace;
                     break;
-                case Option::ALLOW_THROUGH_TEAMMATES:
-                    cfg.allowThroughTeammates = !cfg.allowThroughTeammates;
+                case Option::ALLOW_THROUGH_OTHERS:
+                    cfg.allowThroughOthers = !cfg.allowThroughOthers;
                     break;
                 case Option::SPEED_FACTOR:
                     cfg.speed_factor += 0.1f;
@@ -123,7 +123,7 @@ void ConfigScene::render() {
     const char* labels[] = {
         "Allow Acceleration",
         "Toroidal Space",
-        "Allow Through Teammates",
+        "Allow Through Other Player",
         "Speed Factor",
         "Increasing Difficulty",
         "BACK",
@@ -150,8 +150,8 @@ void ConfigScene::render() {
                 case Option::TOROIDAL_SPACE:
                     valueStr = cfg.toroidalSpace ? "ON" : "OFF";
                     break;
-                case Option::ALLOW_THROUGH_TEAMMATES:
-                    valueStr = cfg.allowThroughTeammates ? "ON" : "OFF";
+                case Option::ALLOW_THROUGH_OTHERS:
+                    valueStr = cfg.allowThroughOthers ? "ON" : "OFF";
                     break;
                 case Option::SPEED_FACTOR:
                     std::snprintf(floatBuf, sizeof(floatBuf), "%.1f", cfg.speed_factor);

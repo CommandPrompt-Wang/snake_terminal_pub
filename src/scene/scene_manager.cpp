@@ -43,10 +43,12 @@ void SceneManager::dispatch_input_events() {
     if (!current) return;
 
     // Define the list of keys to monitor
+    // 白名单
     static const int keys_to_check[] = {
         KEY_W, KEY_S, KEY_A, KEY_D,
         KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
         KEY_SPACE, KEY_ESCAPE, KEY_SLASH, KEY_ENTER, KEY_P, KEY_C,
+        KEY_L,
     };
 
     for (int key : keys_to_check) {

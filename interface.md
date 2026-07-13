@@ -101,6 +101,7 @@ namespace Global {
         PLAYER1_ON_PLAYER2, PLAYER2_ON_PLAYER1,
         PLAYER1_STARVED,   PLAYER2_STARVED,
         BOTH_STARVED,
+        TIMEOUT, MANUAL,   
     };
     GameOverReason last_game_over_reason = GameOverReason::NONE;
 
@@ -116,7 +117,7 @@ namespace Global {
 const auto &cfg = game_config();
 cfg.allowAcceleration;        // 是否加速
 cfg.toroidalSpace;            // 环面地图（穿墙）
-cfg.allowThroughTeammates;    // 是否穿过对方
+cfg.allowThroughOthers;    // 是否穿过对方
 cfg.speed_factor;             // 整体速度倍率（最小 0.1）
 cfg.increasing_difficulty;    // 难度递增系数（0 = 恒定速度）
 ```

@@ -182,6 +182,10 @@ std::string EndScene::parse_game_over_reason(Global::GameOverReason reason) {
             return "PLAYER2 STARVED";
         case Global::GameOverReason::BOTH_STARVED:
             return "BOTH PLAYERS STARVED";
+        case Global::GameOverReason::TIMEOUT:
+            return "TIME LIMIT REACHED";
+        case Global::GameOverReason::MANUAL:
+            return "GAME ENDED";
         default:
             return "";
     }
