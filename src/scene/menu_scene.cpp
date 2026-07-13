@@ -1,8 +1,11 @@
 #include "scene/menu_scene.h"
+#include "global.h"
 #include "raylib.h"
 
 void MenuScene::on_enter() {
     finished_ = false;
+    current_option_ = Option::START;
+    next_scene_id_ = static_cast<int>(SceneId::GAME);
 }
 
 void MenuScene::on_exit() {
@@ -13,57 +16,96 @@ void MenuScene::on_inputevent(InputEvent& event) {
     if (!event.is_key_press()) return;
 
     switch (event.get_key_code()) {
-        case KEY_SPACE:
-            finished_ = true;
+        case KEY_UP:
+        case KEY_W:
+            current_option_ = static_cast<Option>(
+                (static_cast<int>(current_option_) - 1 + OPTION_COUNT) % OPTION_COUNT);
             event.consume();
             break;
-        case KEY_Q:
-        // case KEY_ESCAPE:
+
+        case KEY_DOWN:
+        case KEY_S:
+            current_option_ = static_cast<Option>(
+                (static_cast<int>(current_option_) + 1) % OPTION_COUNT);
+            event.consume();
+            break;
+
+        case KEY_ESCAPE:
             Global::request_quit();
             event.consume();
             break;
+
+        case KEY_ENTER:
+        case KEY_SPACE:
+            switch (current_option_) {
+                case Option::START:
+                    finished_ = true;
+                    next_scene_id_ = static_cast<int>(SceneId::GAME);
+                    break;
+                case Option::CONFIG:
+                    finished_ = true;
+                    next_scene_id_ = static_cast<int>(SceneId::CONFIG);
+                    break;
+                case Option::QUIT:
+                    Global::request_quit();
+                    break;
+            }
+            event.consume();
+            break;
+
         default:
             break;
     }
 }
 
 void MenuScene::on_quitevent(QuitEvent& event) {
-    // Default quit handling — SceneManager will check is_quit_requested
     Global::request_quit();
     event.consume();
 }
 
 void MenuScene::update(float /*dt*/) {
-    // Direct raylib key check to verify event loop is working
-    if (IsKeyPressed(KEY_SPACE)) {
-        finished_ = true;
-    }
-    if (IsKeyPressed(KEY_Q)) {
-        Global::request_quit();
-    }
 }
 
 void MenuScene::render() {
     int screenW = GetScreenWidth();
     int screenH = GetScreenHeight();
 
+    // === Title ===
     DrawText("SNAKE TERMINAL",
-             screenW / 2 - MeasureText("SNAKE TERMINAL", 60) / 2,
+             screenW / 2 - MeasureText("SNAKE TERMINAL", 53) / 2,
              screenH / 3 - 30,
-             60, DARKGREEN);
+             53, DARKGREEN);
 
-    DrawText("Press SPACE to Start",
-             screenW / 2 - MeasureText("Press SPACE to Start", 30) / 2,
-             screenH / 2,
-             30, GRAY);
+    // === Options ===
+    const char* labels[] = {"START", "CONFIG", "QUIT"};
+    const int optFont = 25;
+    const int optGap  = 62;
+    const int optStartY = screenH / 2;
 
-    DrawText("WASD / Arrow Keys to Move",
-             screenW / 2 - MeasureText("WASD / Arrow Keys to Move", 20) / 2,
-             screenH / 2 + 50,
-             20, LIGHTGRAY);
+    for (int i = 0; i < OPTION_COUNT; ++i) {
+        int y = optStartY + i * optGap;
+        bool selected = (static_cast<int>(current_option_) == i);
 
-    DrawText("Press Q to Quit",
-             screenW / 2 - MeasureText("Press Q to Quit", 20) / 2,
-             screenH / 2 + 80,
-             20, LIGHTGRAY);
+        if (selected) {
+            int w = MeasureText(labels[i], optFont) + 40;
+            int h = 40;
+            int x = screenW / 2 - w / 2;
+            DrawRectangle(x, y, w, h, Color{230, 41, 55, 255});
+            DrawText(labels[i],
+                     screenW / 2 - MeasureText(labels[i], optFont) / 2,
+                     y + (h - optFont) / 2,
+                     optFont, BLACK);
+        } else {
+            DrawText(labels[i],
+                     screenW / 2 - MeasureText(labels[i], optFont) / 2,
+                     y + (40 - optFont) / 2,
+                     optFont, LIGHTGRAY);
+        }
+    }
+
+    // === Hint at bottom ===
+    DrawText("Arrow keys to navigate    Enter to confirm",
+             screenW / 2 - MeasureText("Arrow keys to navigate    Enter to confirm", 18) / 2,
+             screenH - 40,
+             18, GRAY);
 }

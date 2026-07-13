@@ -219,7 +219,10 @@ public:
     void draw()
     {
         if (hide) return;
-        refresh_texture();
+        if (texture_frame != frame) {
+            refresh_texture();
+            texture_frame = frame;
+        }
 
         Rectangle src{
             0.0f,
@@ -302,6 +305,8 @@ private:
         int col = frame % hframes;
         int row = frame / hframes;
         Rectangle crop{col * fw, row * fh, fw, fh};
+
+        // std::cout << "[DEBUG] crop = {" << crop.x << ", " << crop.y << ", " << crop.width << ", " << crop.height << "}" << std::endl;
 
         Image frame_img = ImageFromImage(image, crop);
         texture = LoadTextureFromImage(frame_img);

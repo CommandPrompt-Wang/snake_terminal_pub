@@ -4,6 +4,9 @@
 namespace Global {
     inline bool should_quit = false;
 
+    inline int last_score_player1 = 0;
+    inline int last_score_player2 = 0;
+
     inline void request_quit() { should_quit = true; }
     inline bool is_quit_requested() { return should_quit; }
 

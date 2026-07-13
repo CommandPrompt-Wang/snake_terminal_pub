@@ -1,4 +1,6 @@
 #include "scene/scene_manager.h"
+#include "scene/end_scene.h"
+#include "scene/config_scene.h"
 #include "global.h"
 #include "event/input_event.h"
 #include "event/quit_event.h"
@@ -12,9 +14,9 @@ SceneManager::SceneManager() {
     // -- Register all Scenes --
     // Indices correspond to Scene enum: 0=MENU, 1=CONFIG, 2=GAME, 3=DIE
     scenes_[static_cast<int>(SceneId::MENU)] = std::make_unique<MenuScene>();
-    scenes_[static_cast<int>(SceneId::CONFIG)] = nullptr;  // not implemented yet
+    scenes_[static_cast<int>(SceneId::CONFIG)] = std::make_unique<ConfigScene>();
     scenes_[static_cast<int>(SceneId::GAME)]  = std::make_unique<GameScene>();
-    scenes_[static_cast<int>(SceneId::DIE)]   = nullptr;   // will fallback to MENU
+    scenes_[static_cast<int>(SceneId::DIE)]   = std::make_unique<EndScene>();
 
     current_scene_ = static_cast<int>(SceneId::MENU);
     last_frame_time_ = Clock::now();
@@ -44,7 +46,7 @@ void SceneManager::dispatch_input_events() {
     static const int keys_to_check[] = {
         KEY_W, KEY_S, KEY_A, KEY_D,
         KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
-        KEY_SPACE, KEY_ESCAPE, KEY_Q,
+        KEY_SPACE, KEY_ESCAPE, KEY_SLASH, KEY_ENTER, KEY_P, KEY_C,
     };
 
     for (int key : keys_to_check) {
@@ -64,6 +66,7 @@ void SceneManager::run() {
     // -- Initialize raylib window --
     // This is the only place in the entire program where a window is created
     InitWindow(640, 840, "Snake Terminal");
+    SetExitKey(0);  // disable raylib's default ESC→close, handled per-scene
     SetTargetFPS(60);
 
     // Start the initial scene

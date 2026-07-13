@@ -5,6 +5,17 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# Default to Debug build if not specified
+if(NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
+endif()
+
+# Debug-specific flags
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+    add_compile_options(-g -O0)
+    add_definitions(-DDEBUG)
+endif()
+
 # raylib as a git submodule – built inline, no system install needed
 add_subdirectory(third_party/raylib)
 
@@ -13,6 +24,9 @@ add_executable(snake
     src/scene/scene_manager.cpp
     src/scene/game_scene.cpp
     src/scene/menu_scene.cpp
+    src/scene/end_scene.cpp
+    src/scene/config_scene.cpp
+    src/scene/config_scene.h
 )
 
 target_include_directories(snake PRIVATE ${CMAKE_SOURCE_DIR}/src)
