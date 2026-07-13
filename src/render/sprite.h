@@ -278,18 +278,20 @@ private:
             UnloadTexture(texture);
             texture = {};
         }
-        // if (hframes == 1 && vframes == 1)
-        // {
-        //     texture = LoadTextureFromImage(image);
-        //     UnloadImage(image);
-        //     return;
-        // }
+        if (hframes == 1 && vframes == 1)
+        {
+            texture = LoadTextureFromImage(image);
+            UnloadImage(image);
+            return;
+        }
 
         float fw = (float)image.width / (float)hframes;
         float fh = (float)image.height / (float)vframes;
         int col = frame % hframes;
         int row = frame / hframes;
         Rectangle crop{col * fw, row * fh, fw, fh};
+
+        // std::cout << "[DEBUG] crop = {" << crop.x << ", " << crop.y << ", " << crop.width << ", " << crop.height << "}" << std::endl;
 
         Image frame_img = ImageFromImage(image, crop);
         texture = LoadTextureFromImage(frame_img);
