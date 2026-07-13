@@ -1,9 +1,9 @@
 #pragma once
 
 #include "raylib.h"
-#include "sprite.h"
-#include "event.h"
-#include "render.h"
+#include "render/sprite.h"
+#include "global.h"
+#include "render/render.h"
 
 #include <list>
 
@@ -65,21 +65,3 @@ public:
 private:
     std::list<DrawEntry> g_draw_list;
 };
-
-
-
-inline Color g_clear_color = RAYWHITE;
-
-void render_thread()//画面帧渲染，作为单独的线程
-{
-    InitWindow(800, 600, "Snake Terminal");
-    SetTargetFPS(60);
-    while(!WindowShouldClose()){
-        //在这里做画面帧的渲染前准备
-
-        BeginDrawing();
-        ClearBackground(g_clear_color);
-        
-        EndDrawing();
-    }
-}
