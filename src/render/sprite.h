@@ -16,11 +16,60 @@ public:
 
     ~Sprite()
     {
-        if (texture.id != 0)
-        {
-            UnloadTexture(texture);
-        }
+        unload();
     }
+
+    // Move-only: 防止拷贝导致的重复释放 / 泄漏
+    Sprite(Sprite&& other) noexcept
+        : imagepath(std::move(other.imagepath))
+        , image(other.image)
+        , texture(other.texture)
+        , texture_frame(other.texture_frame)
+        , vframes(other.vframes)
+        , hframes(other.hframes)
+        , frame(other.frame)
+        , frame_process(other.frame_process)
+        , during_time(other.during_time)
+        , stopped(other.stopped)
+        , flip_h(other.flip_h)
+        , flip_v(other.flip_v)
+        , hide(other.hide)
+        , pos(other.pos)
+        , offset(other.offset)
+        , scale(other.scale)
+    {
+        other.texture = {};
+        other.image = {};
+        other.texture_frame = -1;
+    }
+
+    Sprite& operator=(Sprite&& other) noexcept {
+        if (this == &other) return *this;
+        unload();
+        imagepath      = std::move(other.imagepath);
+        image          = other.image;
+        texture        = other.texture;
+        texture_frame  = other.texture_frame;
+        vframes        = other.vframes;
+        hframes        = other.hframes;
+        frame          = other.frame;
+        frame_process  = other.frame_process;
+        during_time    = other.during_time;
+        stopped        = other.stopped;
+        flip_h         = other.flip_h;
+        flip_v         = other.flip_v;
+        hide           = other.hide;
+        pos            = other.pos;
+        offset         = other.offset;
+        scale          = other.scale;
+        other.texture = {};
+        other.image = {};
+        other.texture_frame = -1;
+        return *this;
+    }
+
+    Sprite(const Sprite&) = delete;
+    Sprite& operator=(const Sprite&) = delete;
 
     // ---------- Position ----------
     Vector2 get_pos() const
@@ -246,6 +295,13 @@ public:
     }
 
 private:
+    void unload() {
+        if (texture.id != 0) {
+            UnloadTexture(texture);
+            texture = {};
+        }
+    }
+
     std::string imagepath;
     Image image{};            // Sprite sheet source image, loaded at construction
     Texture2D texture{};      // Current frame texture, updated only in update()

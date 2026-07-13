@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "scene/scene.h"
 #include "game/snake.h"
 #include "raylib.h"
@@ -34,6 +36,10 @@ private:
     static constexpr int OPTION_COUNT = 3;
     Option current_option_ = Option::RESTART;
 
-    char winner_text_[32]{};
+    std::string winner_text_ = "";
     Color winner_color_ = GRAY;
+
+    std::string die_reason_ = "";
+
+    std::string parse_game_over_reason(Global::GameOverReason reason);
 };

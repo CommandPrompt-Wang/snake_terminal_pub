@@ -121,9 +121,9 @@ void SceneManager::run() {
         EndDrawing();
     }
 
-    // -- Cleanup --
+    // -- Cleanup: 在 CloseWindow() 之前销毁所有场景，确保 UnloadTexture 时 OpenGL 上下文仍有效 --
     for (auto &s : scenes_) {
-        if (s) s->on_exit();
+        s.reset();
     }
 
     CloseWindow();

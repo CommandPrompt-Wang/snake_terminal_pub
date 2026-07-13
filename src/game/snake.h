@@ -33,11 +33,13 @@ enum class Direction {
 struct SnakeState {
     std::deque<Position> body;
     Direction curDir = Direction::DOWN;
+    Direction lastMoveDir = Direction::DOWN;
     int curSpeed = 1;
 
     void reset() {
         body.clear();
         curDir = Direction::DOWN;
+        lastMoveDir = Direction::DOWN;
         curSpeed = 1;
     }
 };

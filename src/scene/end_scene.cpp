@@ -3,6 +3,7 @@
 #include "raylib.h"
 
 #include <cstring>
+#include <string>
 
 void EndScene::on_enter() {
     finished_ = false;
@@ -11,17 +12,18 @@ void EndScene::on_enter() {
     int score1 = Global::last_score_player1;
     int score2 = Global::last_score_player2;
 
+    die_reason_ = parse_game_over_reason(Global::last_game_over_reason);
+
     if (score1 > score2) {
-        std::strncpy(winner_text_, "PLAYER1 WINS", sizeof(winner_text_) - 1);
+        winner_text_ = "PLAYER1 WINS";
         winner_color_ = DARKGREEN;
     } else if (score2 > score1) {
-        std::strncpy(winner_text_, "PLAYER2 WINS", sizeof(winner_text_) - 1);
+        winner_text_ = "PLAYER2 WINS";
         winner_color_ = DARKBLUE;
     } else {
-        std::strncpy(winner_text_, "DRAW", sizeof(winner_text_) - 1);
+        winner_text_ = "DRAW";
         winner_color_ = GRAY;
     }
-    winner_text_[sizeof(winner_text_) - 1] = '\0';
 }
 
 void EndScene::on_exit() {
@@ -85,6 +87,11 @@ void EndScene::render() {
              screenH / 4 - 30,
              50, Color{230, 41, 55, 255});
 
+    DrawText(die_reason_.c_str(),
+             screenW / 2 - MeasureText(die_reason_.c_str(), 20) / 2,
+             screenH / 4 + 30,
+             20, GRAY);
+
     // === Score area ===
     const int scoreY = screenH / 2 - 40;
 
@@ -111,8 +118,8 @@ void EndScene::render() {
              30, DARKBLUE);
 
     // === Winner text ===
-    DrawText(winner_text_,
-             screenW / 2 - MeasureText(winner_text_, 28) / 2,
+    DrawText(winner_text_.c_str(),
+             screenW / 2 - MeasureText(winner_text_.c_str(), 28) / 2,
              scoreY + 50,
              28, winner_color_);
 
@@ -155,3 +162,27 @@ int EndScene::get_next_scene_id() const {
     return static_cast<int>(next_scene_id_);
 }
 
+std::string EndScene::parse_game_over_reason(Global::GameOverReason reason) {
+    switch (reason) {
+        case Global::GameOverReason::PLAYER1_ON_WALL:
+            return "PLAYER1 HIT THE WALL";
+        case Global::GameOverReason::PLAYER2_ON_WALL:
+            return "PLAYER2 HIT THE WALL";
+        case Global::GameOverReason::PLAYER1_ON_SELF:
+            return "PLAYER1 HIT ITSELF";
+        case Global::GameOverReason::PLAYER2_ON_SELF:
+            return "PLAYER2 HIT ITSELF";
+        case Global::GameOverReason::PLAYER1_ON_PLAYER2:
+            return "PLAYER1 COLLIDED WITH PLAYER2";
+        case Global::GameOverReason::PLAYER2_ON_PLAYER1:
+            return "PLAYER2 COLLIDED WITH PLAYER1";
+        case Global::GameOverReason::PLAYER1_STARVED:
+            return "PLAYER1 STARVED";
+        case Global::GameOverReason::PLAYER2_STARVED:
+            return "PLAYER2 STARVED";
+        case Global::GameOverReason::BOTH_STARVED:
+            return "BOTH PLAYERS STARVED";
+        default:
+            return "";
+    }
+}

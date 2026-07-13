@@ -57,12 +57,9 @@ private:
 
     bool pause = false;
 
-    // Direction buffer (set by on_inputevent, consumed in update)
-    // Using optional-like flags for "no pending direction"
-    bool has_pending_dir1_ = false;
-    bool has_pending_dir2_ = false;
-    Direction pending_dir1_ = Direction::DOWN;
-    Direction pending_dir2_ = Direction::UP;
+    // Direction queue (pooled input, consumed in update)
+    std::deque<Direction> pending_dirs1_;
+    std::deque<Direction> pending_dirs2_;
 
     // timing
     using Clock = std::chrono::steady_clock;
@@ -71,6 +68,8 @@ private:
     // rendering
     Draw_List draw_list_;
     std::vector<std::unique_ptr<Snake_Block>> snake_blocks_;
+    Snake_Body snake_body_1_{nullptr, 0};
+    Snake_Body snake_body_2_{nullptr, 0};
 
     // cell size for rendering
     static constexpr int CELL_SIZE = 32;

@@ -36,6 +36,7 @@ bool GameScene::on_body(const std::deque<Position> &body, const Position &p, int
 void GameScene::init_snake(SnakeState &s, int startX, int startY, Direction dir, int len) {
     s.body.clear();
     s.curDir = dir;
+    s.lastMoveDir = dir;
     s.curSpeed = 1;
     for (int i = 0; i < len; ++i) {
         if (dir == Direction::LEFT)  s.body.push_back({startX + i, startY});
@@ -45,25 +46,34 @@ void GameScene::init_snake(SnakeState &s, int startX, int startY, Direction dir,
     }
 }
 
-bool GameScene::tick_player(SnakeState &p, int /*player*/, const SnakeState &other, Position &apple) {
+bool GameScene::tick_player(SnakeState &p, int player, const SnakeState &other, Position &apple) {
     Position head = next_head(p);
 
     // wall collision
-    if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H) {
-        return false;
+    if(game_config().toroidalSpace) {
+        if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H) {
+            if (player == 1) Global::last_game_over_reason = Global::GameOverReason::PLAYER1_ON_WALL;
+            else if (player == 2) Global::last_game_over_reason = Global::GameOverReason::PLAYER2_ON_WALL;
+            return false;
+        }
     }
 
     // self collision
     if (on_body(p.body, head, 1)) {
+        if (player == 1) Global::last_game_over_reason = Global::GameOverReason::PLAYER1_ON_SELF;
+        else if (player == 2) Global::last_game_over_reason = Global::GameOverReason::PLAYER2_ON_SELF;
         return false;
     }
 
     // other-player collision
     if (!game_config().allowThroughTeammates && !other.body.empty() && on_body(other.body, head)) {
+        if (player == 1) Global::last_game_over_reason = Global::GameOverReason::PLAYER1_ON_PLAYER2;
+        else if (player == 2) Global::last_game_over_reason = Global::GameOverReason::PLAYER2_ON_PLAYER1;
         return false;
     }
 
     p.body.push_front(head);
+    p.lastMoveDir = p.curDir;
 
     if (head == apple) {
         apple = random_apple_pos(/* player1 = */ p, /* player2 = */ other);
@@ -76,14 +86,21 @@ bool GameScene::tick_player(SnakeState &p, int /*player*/, const SnakeState &oth
 
 // -- consume buffered direction into actual snake dir --
 void GameScene::consume_pending_dir() {
-    if (has_pending_dir1_ && !is_opposite(p1_.curDir, pending_dir1_)) {
-        p1_.curDir = pending_dir1_;
+    while (!pending_dirs1_.empty()) {
+        Direction d = pending_dirs1_.front();
+        pending_dirs1_.pop_front();
+        // 和上一次实际移动方向比较，而非 curDir
+        if (!is_opposite(p1_.lastMoveDir, d)) {
+            p1_.curDir = d;
+        }
     }
-    if (has_pending_dir2_ && !is_opposite(p2_.curDir, pending_dir2_)) {
-        p2_.curDir = pending_dir2_;
+    while (!pending_dirs2_.empty()) {
+        Direction d = pending_dirs2_.front();
+        pending_dirs2_.pop_front();
+        if (!is_opposite(p2_.lastMoveDir, d)) {
+            p2_.curDir = d;
+        }
     }
-    has_pending_dir1_ = false;
-    has_pending_dir2_ = false;
 }
 
 // -- constructor / destructor ---------------------
@@ -91,14 +108,12 @@ void GameScene::consume_pending_dir() {
 GameScene::GameScene()  = default;
 GameScene::~GameScene() = default;
 
-Snake_Body snake_body_1,snake_body_2;
-
 void GameScene::on_enter() {
     pause = false;
     finished_ = false;
     next_scene_id_ = static_cast<int>(SceneId::DIE);
-    has_pending_dir1_ = false;
-    has_pending_dir2_ = false;
+    pending_dirs1_.clear();
+    pending_dirs2_.clear();
 
     init_snake(p1_, 5, 5, Direction::DOWN, 3);
     init_snake(p2_, GRID_W - 6, GRID_H - 6, Direction::UP, 3);
@@ -109,12 +124,12 @@ void GameScene::on_enter() {
 
     last_tick_ = Clock::now();
     
-    snake_body_1 = Snake_Body(&p1_, 1);
-    snake_body_1.set_scale({2.0,2.0});
-    draw_list_.push_back(&snake_body_1);
-    snake_body_2 = Snake_Body(&p2_, 2);
-    snake_body_2.set_scale({2.0,2.0});
-    draw_list_.push_back(&snake_body_2);
+    snake_body_1_ = Snake_Body(&p1_, 1);
+    snake_body_1_.set_scale({2.0,2.0});
+    draw_list_.push_back(&snake_body_1_);
+    snake_body_2_ = Snake_Body(&p2_, 2);
+    snake_body_2_.set_scale({2.0,2.0});
+    draw_list_.push_back(&snake_body_2_);
 }
 
 void GameScene::on_exit() {
@@ -127,14 +142,14 @@ void GameScene::on_inputevent(InputEvent& event) {
     if (!event.is_key_press()) return;
 
     switch (event.get_key_code()) {
-        case KEY_W: pending_dir1_ = Direction::UP;    has_pending_dir1_ = true; break;
-        case KEY_S: pending_dir1_ = Direction::DOWN;  has_pending_dir1_ = true; break;
-        case KEY_A: pending_dir1_ = Direction::LEFT;  has_pending_dir1_ = true; break;
-        case KEY_D: pending_dir1_ = Direction::RIGHT; has_pending_dir1_ = true; break;
-        case KEY_UP:    pending_dir2_ = Direction::UP;    has_pending_dir2_ = true; break;
-        case KEY_DOWN:  pending_dir2_ = Direction::DOWN;  has_pending_dir2_ = true; break;
-        case KEY_LEFT:  pending_dir2_ = Direction::LEFT;  has_pending_dir2_ = true; break;
-        case KEY_RIGHT: pending_dir2_ = Direction::RIGHT; has_pending_dir2_ = true; break;
+        case KEY_W: pending_dirs1_.push_back(Direction::UP);    break;
+        case KEY_S: pending_dirs1_.push_back(Direction::DOWN);  break;
+        case KEY_A: pending_dirs1_.push_back(Direction::LEFT);  break;
+        case KEY_D: pending_dirs1_.push_back(Direction::RIGHT); break;
+        case KEY_UP:    pending_dirs2_.push_back(Direction::UP);    break;
+        case KEY_DOWN:  pending_dirs2_.push_back(Direction::DOWN);  break;
+        case KEY_LEFT:  pending_dirs2_.push_back(Direction::LEFT);  break;
+        case KEY_RIGHT: pending_dirs2_.push_back(Direction::RIGHT); break;
         case KEY_ESCAPE:
             if (pause) {
                 finished_ = true;

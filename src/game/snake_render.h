@@ -31,9 +31,13 @@ public:
         side[2].set_flip_v(1);speedup[2].set_flip_v(1);
         side[3].set_flip_h(1);speedup[3].set_flip_h(1);
     }
-    ~Snake_Block ()
-    {
-    }
+    ~Snake_Block () = default;
+
+    // Move-only (Sprite 是 move-only 的)
+    Snake_Block(Snake_Block&&) = default;
+    Snake_Block& operator=(Snake_Block&&) = default;
+    Snake_Block(const Snake_Block&) = delete;
+    Snake_Block& operator=(const Snake_Block&) = delete;
 
     void set_status (Snake_Block *pre, Snake_Block *nxt, bool speed_up = false)
     {
@@ -134,6 +138,12 @@ public:
     Snake_Body (SnakeState* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid)
     {
     }
+
+    // Move-only (Sprite 是 move-only 的)
+    Snake_Body(Snake_Body&&) = default;
+    Snake_Body& operator=(Snake_Body&&) = default;
+    Snake_Body(const Snake_Body&) = delete;
+    Snake_Body& operator=(const Snake_Body&) = delete;
     void set_scale (Vector2 scale)
     {
         this->scale = scale;
