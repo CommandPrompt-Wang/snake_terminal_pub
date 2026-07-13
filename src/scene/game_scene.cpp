@@ -117,6 +117,8 @@ void GameScene::on_enter() {
 }
 
 void GameScene::on_exit() {
+    snake_body_1.print_pos();
+    snake_body_2.print_pos();
     draw_list_.clear();
 }
 
