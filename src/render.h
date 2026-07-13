@@ -4,6 +4,6 @@
 class Basic_Render_Class
 {
 public:
-    virtual void draw ();
-    virtual void update ();
+    virtual void draw () = 0;
+    virtual void update () = 0;
 };

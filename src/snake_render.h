@@ -3,6 +3,7 @@
 #include "sprite.h"
 #include "render.h"
 #include<string>
+#include<vector>
 
 Vector2 operator + (const Vector2& a,const Vector2& b)
 {
@@ -12,14 +13,13 @@ bool operator == (const Vector2& a,const Vector2& b)
 {
     return a.x == b.x && a.y == b.y;
 }
-
-class Snake_Block : Basic_Render_Class
+class Snake_Block : public Basic_Render_Class
 {
 public:
     Snake_Block (int playerid = 0, Vector2 pos = {0,0}, Vector2 offset = {0,0})//color = false : player 1; color = true : player 2
     :
-    side({Sprite("resources/up_side.png"),Sprite("resources/right_side.png"),Sprite("resources/up_side.png"),Sprite("resources/right_side.png")}),
-    speedup({Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png"),Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png")}),
+    side{Sprite("resources/up_side.png"),Sprite("resources/right_side.png"),Sprite("resources/up_side.png"),Sprite("resources/right_side.png")},
+    speedup{Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png"),Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png")},
     fill(Sprite("resources/player" + std::to_string(playerid) + "fill.png"))
     {
         side[2].set_flip_v(1);speedup[2].set_flip_v(1);
@@ -52,14 +52,25 @@ public:
         }
 
     }
+    void set_scale(Vector2 scale)
+    {
+        this->scale = scale;
+        head[0].set_scale(scale);head[1].set_scale(scale);
+        side[0].set_scale(scale);side[1].set_scale(scale);side[2].set_scale(scale);side[3].set_scale(scale);
+        speedup[0].set_scale(scale);speedup[1].set_scale(scale);speedup[2].set_scale(scale);speedup[3].set_scale(scale);
+        fill.set_scale(scale);
+    }
     void set_pos (Vector2 pos)
     {
         this->pos = pos;
+        Vector2 draw_position(pos);
+        fill.set_pos(draw_position);head[0].set_pos(draw_position);head[1].set_pos(draw_position);
+        side[0].set_pos(draw_position);side[1].set_pos(draw_position);side[2].set_pos(draw_position);side[3].set_pos(draw_position);
+        speedup[0].set_pos(draw_position);speedup[1].set_pos(draw_position);speedup[2].set_pos(draw_position);speedup[3].set_pos(draw_position);
     }
     void draw ()
     {
-        Vector2 draw_position = pos;
-        fill.set_pos(draw_position); fill.draw();
+        fill.draw();
         if (is_head)
         {
             Event dir = EventServer::getEvent(playerid, EventType::MOVE);
@@ -67,28 +78,24 @@ public:
             {
                 case Event::UP :
                 {
-                    head[0].set_pos(draw_position);
                     head[0].set_flip_v(0);head[0].set_hide(0);
                     head[0].update();head[0].draw();
                     break;
                 }
                 case Event::RIGHT :
                 {
-                    head[1].set_pos(draw_position);
                     head[1].set_flip_h(0);head[1].set_hide(0);
                     head[1].update();head[1].draw();
                     break;
                 }
                 case Event::DOWN :
                 {
-                    head[0].set_pos(draw_position);
                     head[0].set_flip_v(1);head[0].set_hide(0);
                     head[0].update();head[0].draw();
                     break;
                 }
                 case Event::LEFT :
                 {
-                    head[1].set_pos(draw_position);
                     head[1].set_flip_h(1);head[1].set_hide(0);
                     head[1].update();head[1].draw();
                     break;
@@ -102,13 +109,11 @@ public:
             {
                 if (speed_up)
                 {
-                    speedup[i].set_pos(draw_position);
                     speedup[i].set_hide(0);
                     speedup[i].update();speedup[i].draw();
                 }
                 else
                 {
-                    side[i].set_pos(draw_position);
                     side[i].set_hide(0);
                     side[i].update();side[i].draw();
                 }
@@ -130,11 +135,12 @@ private:
     inline static Sprite head[2] = {Sprite("resources/up_head.png"),Sprite("resources/right_head.png")};
     bool is_head = false,speed_up = false;
 
-    Vector2 pos;
-    int playerid;
+    Vector2 pos{0, 0};
+    Vector2 scale{1, 1};
+    int playerid = 0;
     //这里的pos表示在地图的pos，乘以固定比率才是实际的位置
     //地图以左上角为原点，向右为x+，向下为y+
-    bool side_status[4];//0 = up, 1 = right, 2 = down, 3 = left;side = 0 for show, 1 for hide
+    bool side_status[4] = {0, 0, 0, 0};//0 = up, 1 = right, 2 = down, 3 = left;side = 0 for show, 1 for hide
     static constexpr Vector2 mv[4] =
     {
         { 0,-1},
@@ -146,8 +152,20 @@ private:
 
 class Snake_Body : Basic_Render_Class
 {
+private:
+    std::vector<Snake_Block> body;
+    float frame_process;
+    const float speedup_advance_interval;
+public:
     void update ()
     {}
     void draw ()
-    {}
+    {
+    }
+    void sync_position()
+    {
+        //如果蛇体位置更改
+        {
+        }
+    }
 };

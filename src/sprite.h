@@ -6,22 +6,13 @@
 
 // 基于 raylib 的简单 Sprite
 // Image 在构造时载入；Texture2D 仅在 update 检测到新帧时更新；析构时 Unload
-class Sprite : Basic_Render_Class
+class Sprite : public Basic_Render_Class
 {
 public:
     // 从文件加载 Image；
     explicit Sprite(const std::string& path)
     {
         image = LoadImage(path.c_str());
-    }
-
-    // 拷贝 Image；调用方可自行 UnloadImage
-    explicit Sprite(Image src = {})
-    {
-        if (src.data != nullptr)
-        {
-            image = ImageCopy(src);
-        }
     }
 
     ~Sprite()
@@ -36,7 +27,6 @@ public:
         }
     }
 
-    // ---------- 位置 ----------
     Vector2 get_pos() const
     {
         return pos;
@@ -271,7 +261,7 @@ private:
 
     float frame_process = 0.0f;  // 当前帧已播放时间
     float during_time = 0.0f;    // 一整轮动画时长（秒）
-    bool stopped = true;         // 是否暂停
+    bool stopped = false;         // 是否暂停
 
     bool flip_h = false;  // 水平翻转
     bool flip_v = false;  // 垂直翻转
