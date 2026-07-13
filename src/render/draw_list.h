@@ -1,12 +1,12 @@
 #pragma once
 
 #include "raylib.h"
-#include "render/sprite.h"
 #include "global.h"
 #include "render/render.h"
 
 #include <list>
 #include <iostream>
+#include <algorithm>
 
 
 class Draw_By_Layer
@@ -27,8 +27,10 @@ class Draw_By_Layer
         for(auto &i : vec)DrawTexturePro(i.first.texture,i.first.source,i.first.dest,i.first.origin,i.first.rotation,i.first.tint);
         vec.clear();
     }
-}draw_layer;
-void push_draw(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint, int layer)
+};
+
+inline Draw_By_Layer draw_layer;
+inline void push_draw(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint, int layer)
 {
     draw_layer.push_draw(texture, source, dest, origin, rotation, tint, layer);
 }
