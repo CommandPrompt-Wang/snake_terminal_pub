@@ -94,6 +94,7 @@ GameScene::~GameScene() = default;
 Snake_Body snake_body_1,snake_body_2;
 
 void GameScene::on_enter() {
+    pause = false;
     finished_ = false;
     next_scene_id_ = static_cast<int>(SceneId::DIE);
     has_pending_dir1_ = false;
@@ -135,8 +136,10 @@ void GameScene::on_inputevent(InputEvent& event) {
         case KEY_LEFT:  pending_dir2_ = Direction::LEFT;  has_pending_dir2_ = true; break;
         case KEY_RIGHT: pending_dir2_ = Direction::RIGHT; has_pending_dir2_ = true; break;
         case KEY_ESCAPE:
-            finished_ = true;
-            next_scene_id_ = static_cast<int>(SceneId::MENU);
+            if (pause) {
+                finished_ = true;
+                next_scene_id_ = static_cast<int>(SceneId::MENU);
+            }
             event.consume();
             break;
         // shouldn't do this otherwise will cause segment fault
@@ -153,8 +156,11 @@ void GameScene::on_inputevent(InputEvent& event) {
 }
 
 void GameScene::update(float dt) {
-    if (pause) return;
-    
+    if (pause) {
+        draw_list_.update();
+        return;
+    }
+
     consume_pending_dir();
     // speed boost
     if (game_config().allowAcceleration) {
@@ -165,7 +171,7 @@ void GameScene::update(float dt) {
         speed1_ = s1; speed2_ = s2;
     }
 
-    // tick timing
+    // tick timing (base rate, unaffected by per-player speed boost)
     int highScore = std::max((int)p1_.body.size() - 3, (int)p2_.body.size() - 3);
     double diffMult = 1.0;
     if (game_config().increasing_difficulty > 0) {
@@ -173,16 +179,20 @@ void GameScene::update(float dt) {
         diffMult = 1.0 + 2.0 * std::log10((k * highScore) / 9.0 + 1.0);
     }
     float spd = std::max(0.1f, game_config().speed_factor);
-    double tickMs = 500.0 / (diffMult * spd * std::max(p1_.curSpeed, p2_.curSpeed));
+    double tickMs = 500.0 / (diffMult * spd);
     auto now = Clock::now();
     auto interval = std::chrono::milliseconds(static_cast<int>(tickMs));
     if (now - last_tick_ >= interval) {
         last_tick_ = now;
 
-        bool alive1 = tick_player(p1_, 1, p2_, apple_);
-        bool alive2 = tick_player(p2_, 2, p1_, apple_);
-
-        // apple position already in apple_ member
+        // Each player moves curSpeed times per tick (1 = normal, 2 = boosted)
+        bool alive1 = true, alive2 = true;
+        for (int i = 0; i < std::max(p1_.curSpeed, 1); ++i) {
+            if (alive1) alive1 = tick_player(p1_, 1, p2_, apple_);
+        }
+        for (int i = 0; i < std::max(p2_.curSpeed, 1); ++i) {
+            if (alive2) alive2 = tick_player(p2_, 2, p1_, apple_);
+        }
 
         if (!alive1 || !alive2) {
             Global::last_score_player1 = std::max(0, (int)p1_.body.size() - 3);
@@ -222,5 +232,14 @@ void GameScene::render() {
     int score2 = std::max(0, (int)p2_.body.size() - 3);
     DrawText(TextFormat("P1: %d", score1), 10, 10, 20, DARKGREEN);
     DrawText(TextFormat("P2: %d", score2), 10, 40, 20, DARKBLUE);
+    
+    if (pause) {
+        int screenW = GetScreenWidth();
+        int screenH = GetScreenHeight();
+        DrawText("PAUSED", screenW / 2 - MeasureText("PAUSED", 40) / 2, screenH / 2 - 20, 40, GRAY);
+        DrawText("Press P to resume", screenW / 2 - MeasureText("Press P to resume", 20) / 2, screenH / 2 + 30, 20, GRAY);
+        DrawText("Press ESC to return to menu", screenW / 2 - MeasureText("Press ESC to return to menu", 20) / 2, screenH / 2 + 60, 20, GRAY);
+    }
+
     DrawFPS(10, 70);
 }

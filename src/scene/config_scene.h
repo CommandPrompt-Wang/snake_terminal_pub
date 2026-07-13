@@ -1,6 +1,7 @@
 #pragma once
 
 #include "scene/scene.h"
+#include "game/snake.h"
 #include "raylib.h"
 
 class ConfigScene : public Scene {
@@ -10,7 +11,6 @@ public:
 
     void on_enter() override;
     void on_exit() override;
-
     void update(float delta_time) override;
     void render() override;
 
@@ -18,4 +18,20 @@ public:
     int get_next_scene_id() const override;
     const char* get_name() const override { return "ConfigScene"; }
 
+protected:
+    void on_inputevent(InputEvent& event) override;
+
+private:
+    enum class Option {
+        ALLOW_ACCELERATION,
+        TOROIDAL_SPACE,
+        ALLOW_THROUGH_TEAMMATES,
+        SPEED_FACTOR,
+        INCREASING_DIFFICULTY,
+        BACK,
+    };
+    static constexpr int OPTION_COUNT = 6;
+    Option current_option_ = Option::ALLOW_ACCELERATION;
+    bool finished_ = false;
+    int next_scene_id_ = static_cast<int>(SceneId::MENU);
 };

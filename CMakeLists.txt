@@ -25,6 +25,7 @@ add_executable(snake
     src/scene/game_scene.cpp
     src/scene/menu_scene.cpp
     src/scene/end_scene.cpp
+    src/scene/config_scene.cpp
     src/scene/config_scene.h
 )
 

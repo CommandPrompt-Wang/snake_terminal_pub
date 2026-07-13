@@ -3,8 +3,7 @@
 #include "game/snake.h"
 
 // -- MenuScene --------------------------------------
-// Menu scene: displays title, waits for SPACE to start the game
-// Input is dispatched via handle_event() → on_inputevent()
+// Menu scene: displays title, option list with up/down navigation.
 class MenuScene : public Scene {
 public:
     MenuScene() = default;
@@ -16,7 +15,7 @@ public:
     void render() override;
 
     bool is_finished() const override { return finished_; }
-    int get_next_scene_id() const override { return static_cast<int>(SceneId::GAME); }
+    int get_next_scene_id() const override { return next_scene_id_; }
     const char* get_name() const override { return "MenuScene"; }
 
 protected:
@@ -24,5 +23,13 @@ protected:
     void on_quitevent(QuitEvent& event) override;
 
 private:
+    enum class Option {
+        START,
+        CONFIG,
+        QUIT,
+    };
+    static constexpr int OPTION_COUNT = 3;
+    Option current_option_ = Option::START;
     bool finished_ = false;
+    int next_scene_id_ = static_cast<int>(SceneId::GAME);
 };
