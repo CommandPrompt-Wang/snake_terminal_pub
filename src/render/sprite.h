@@ -14,7 +14,7 @@ class Sprite : public Basic_Render_Class
 {
 public:
     // Load Image from file;
-    explicit Sprite(const std::string& path,int layer = 0):imagepath(path),layer(layer){}
+    explicit Sprite(const std::string& path,int layer):imagepath(path),layer(layer){}
 
     ~Sprite()
     {
@@ -39,6 +39,7 @@ public:
         , pos(other.pos)
         , offset(other.offset)
         , scale(other.scale)
+        , layer(other.layer)
     {
         other.texture = {};
         other.image = {};
@@ -64,6 +65,7 @@ public:
         pos            = other.pos;
         offset         = other.offset;
         scale          = other.scale;
+        layer          = other.layer;
         other.texture = {};
         other.image = {};
         other.texture_frame = -1;
@@ -301,7 +303,7 @@ public:
             fw * scale.x,
             fh * scale.y,
         };
-        push_draw(texture, src, dest, Vector2{0, 0}, 0.0f, WHITE,layer);
+        push_draw(texture, src, dest, Vector2{0, 0}, 0.0f, WHITE,layer,imagepath);
     }
 
 private:

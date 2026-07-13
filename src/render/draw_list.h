@@ -16,23 +16,27 @@ class Draw_By_Layer
     {
         Texture2D texture; Rectangle source; Rectangle dest; Vector2 origin; float rotation; Color tint;
     };
-    std::vector<std::pair<data,int> > vec;
-    void push_draw(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint, int layer)
+    std::vector<std::pair<data,std::pair<int,std::string> > > vec;
+    void push_draw(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint, int layer,std::string imagepath = "")
     {
-        vec.emplace_back(data{texture,source,dest,origin,rotation,tint},layer);
+        vec.emplace_back(data{texture,source,dest,origin,rotation,tint},std::make_pair(layer,imagepath));
     }
     void draw()
     {
-        std::sort(vec.begin(),vec.end(),[](auto& a,auto& b){return a.second > b.second;});
-        for(auto &i : vec)DrawTexturePro(i.first.texture,i.first.source,i.first.dest,i.first.origin,i.first.rotation,i.first.tint);
+        std::sort(vec.begin(),vec.end(),[](auto& a,auto& b){return a.second.first < b.second.first;});
+        for (auto &i : vec)
+        {
+            DrawTexturePro(i.first.texture,i.first.source,i.first.dest,i.first.origin,i.first.rotation,i.first.tint);
+            std::cerr << "asd;lkjfaj;lkkj;flsdaj;klfsdaafsd; i.second = " << i.second.first << " i.path = " << i.second.second <<  '\n';
+        }
         vec.clear();
     }
 };
 
 inline Draw_By_Layer draw_layer;
-inline void push_draw(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint, int layer)
+inline void push_draw(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint, int layer, std::string imagepath = "")
 {
-    draw_layer.push_draw(texture, source, dest, origin, rotation, tint, layer);
+    draw_layer.push_draw(texture, source, dest, origin, rotation, tint, layer, imagepath);
 }
 
 class Draw_List

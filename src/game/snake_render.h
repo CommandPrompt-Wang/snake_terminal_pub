@@ -35,22 +35,14 @@ public:
     Snake_Block (int playerid = 0, Vector2 pos = {0,0})
     :
     playerid(playerid), pos(pos),
-    side{Sprite("resources/up_side.png"),Sprite("resources/right_side.png"),Sprite("resources/up_side.png"),Sprite("resources/right_side.png")},
-    speedup{Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png"),Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png")},
-    fill(Sprite("resources/player" + std::to_string(playerid) + "fill.png"))
+    side{Sprite("resources/up_side.png",2),Sprite("resources/right_side.png",2),Sprite("resources/up_side.png",2),Sprite("resources/right_side.png",2)},
+    speedup{Sprite("resources/up_speed_side.png",3),Sprite("resources/right_speed_side.png",3),Sprite("resources/up_speed_side.png",3),Sprite("resources/right_speed_side.png",3)},
+    fill(Sprite("resources/player" + std::to_string(playerid) + "fill.png",1))
     {
         side[2].set_flip_v(1);speedup[2].set_flip_v(1);
         side[3].set_flip_h(1);speedup[3].set_flip_h(1);
     }
-    ~Snake_Block ()
-    {
-        fill.set_layer(1);
-        for (int i = 0;i < 4;i++)
-        {
-            side[i].set_layer(1);
-            speedup[i].set_layer(2);
-        }
-    }
+    ~Snake_Block (){}
 
     // Move-only (Sprite 是 move-only 的)
     Snake_Block(Snake_Block&&) = default;
@@ -79,7 +71,7 @@ public:
     const int get_status()
     {
         int sta = 0;
-        for(int i = 0;i < 4;i++)sta = (sta << 1) | (side_status[i]);
+        for(int i = 0;i < 4;i++)sta = (sta * 10) + (side_status[i]);
         return sta;
     }
     const Vector2 get_pos(){return pos;}
@@ -159,18 +151,20 @@ private:
 class Snake_Body : public Basic_Render_Class
 {
 private:
-    Sprite head[2] = {Sprite("resources/up_head.png"),Sprite("resources/right_head.png")};
+    Sprite head[2] = {Sprite("resources/up_head.png",10),Sprite("resources/right_head.png",10)};
     std::vector<Snake_Block> body;
     float frame_process = 0;
     inline static const float speedup_time = 0.6; // 加速向后传递的时间
+    inline static constexpr int speedup_loop_length = 4, speedup_length = 2;//looplength表示多长一循环，speeduplength表示加速节多长
+    int speedup_offset = 0;
     SnakeState* snake;
     int playerid;
     Vector2 scale = {1, 1};//设置缩放
 public:
     Snake_Body (SnakeState* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid)
     {
-        head[0].set_layer(3);
-        head[1].set_layer(3);
+        speedup_offset = 0;
+        frame_process = 0;
     }
 
     // Move-only (Sprite 是 move-only 的)
@@ -215,8 +209,22 @@ public:
                 break;
             }
         }
-        head[0].update();
-        head[1].update();
+        head[0].update();head[1].update();
+        bool is_speedup = snake->curSpeed >= 2;
+        if (is_speedup)
+        {
+            frame_process += GetFrameTime();
+            while (frame_process > speedup_time)
+            {
+                frame_process -= speedup_time;
+                speedup_offset = (speedup_offset + 1) % speedup_loop_length;
+            }
+        }
+        else
+        {
+            frame_process = 0;
+            speedup_offset = 0;
+        }
         while (body.size() < snake->body.size())
         {
             body.emplace_back(playerid, (Vector2){0, 0});
@@ -224,8 +232,8 @@ public:
         }
         if(snake->body.size() != 0)
         {
-            head[0].set_pos(snake->body[0].x,snake->body[0].y);
-            head[1].set_pos(snake->body[0].x,snake->body[0].y);
+            head[0].set_pos(snake->body[0].x * 32 +    0,snake->body[0].y * 32 + 200);
+            head[1].set_pos(snake->body[0].x * 32 +    0,snake->body[0].y * 32 + 200);
         }
         for (int i = 0;i < body.size();i++)
         {
@@ -236,7 +244,7 @@ public:
             Snake_Block *pre = nullptr, *nxt = nullptr;
             if (i - 1 >= 0) pre = &body[i - 1];
             if (i + 1 <= body.size() - 1) nxt = &body[i + 1];
-            body[i].set_status(pre, nxt, false, game_config().toroidalSpace);
+            body[i].set_status(pre, nxt, is_speedup & ((i - speedup_offset + speedup_loop_length) % speedup_loop_length < speedup_length), game_config().toroidalSpace);
             body[i].update();
         }
     }
