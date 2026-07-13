@@ -7,13 +7,15 @@
 #include <array>
 #include <vector>
 
+constexpr float eps = 1e-6;
+
 inline Vector2 operator + (const Vector2& a,const Vector2& b)
 {
     return {a.x + b.x,a.y + b.y};
 }
 inline bool operator == (const Vector2& a,const Vector2& b)
 {
-    return a.x == b.x && a.y == b.y;
+    return abs(a.x - b.x) < eps && abs(a.y - b.y) < eps;
 }
 
 class Snake_Block : public Basic_Render_Class
@@ -109,7 +111,7 @@ private:
     // pos 为逻辑网格坐标，实际像素位置 = pos * CELL_SIZE + OFFSET
     // 地图以左上角为原点，向右为 x+，向下为 y+
     bool side_status[4] = {0, 0, 0, 0}; // 0=上,1=右,2=下,3=左; 0=显示侧边,1=隐藏
-    static constexpr Vector2 mv[4] =
+    inline static constexpr Vector2 mv[4] =
     {
         { 0,-1},
         { 1, 0},
