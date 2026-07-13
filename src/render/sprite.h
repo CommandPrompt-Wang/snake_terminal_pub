@@ -202,21 +202,13 @@ public:
         }
 
         // Only update texture when frame changes (including first time)
-        if (frame != texture_frame)
-        {
-            refresh_texture();
-            texture_frame = frame;
-        }
     }
 
     // ---------- Draw ----------
     void draw()
     {
         if (hide) return;
-        if (texture.id == 0)
-        {
-            return;
-        }
+        refresh_texture();
 
         Rectangle src{
             0.0f,
@@ -286,12 +278,12 @@ private:
             UnloadTexture(texture);
             texture = {};
         }
-        if (hframes == 1 && vframes == 1)
-        {
-            texture = LoadTextureFromImage(image);
-            UnloadImage(image);
-            return;
-        }
+        // if (hframes == 1 && vframes == 1)
+        // {
+        //     texture = LoadTextureFromImage(image);
+        //     UnloadImage(image);
+        //     return;
+        // }
 
         float fw = (float)image.width / (float)hframes;
         float fh = (float)image.height / (float)vframes;
