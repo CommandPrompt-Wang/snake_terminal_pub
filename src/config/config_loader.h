@@ -1,7 +1,7 @@
 #pragma once
 #include <fstream>
 #include <string>
-#include "config.h"
+#include "config/config.h"
 
 // simple text‑based config loader
 // format: key = value  (one per line, '#' for comments)

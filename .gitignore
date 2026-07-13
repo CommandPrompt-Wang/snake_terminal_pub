@@ -10,3 +10,11 @@ compile_commands.json
 !.vscode/c_cpp_properties.json
 !.vscode/settings.json
 cmake-build-*/
+
+# CMake 根目录生成物
+CMakeCache.txt
+CMakeFiles/
+CPackConfig.cmake
+CPackSourceConfig.cmake
+Makefile
+cmake_install.cmake

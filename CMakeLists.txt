@@ -10,8 +10,9 @@ add_subdirectory(third_party/raylib)
 
 add_executable(snake
     src/app.cpp
-    src/input_thread.cpp
-    src/render_thread.cpp
+    src/scene/scene_manager.cpp
+    src/scene/game_scene.cpp
+    src/scene/menu_scene.cpp
 )
 
 target_include_directories(snake PRIVATE ${CMAKE_SOURCE_DIR}/src)

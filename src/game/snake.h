@@ -1,7 +1,7 @@
 #pragma once
 #include <deque>
 #include <random>
-#include "event.h"
+#include "global.h"
 
 constexpr int GRID_W = 20;
 constexpr int GRID_H = 20;
@@ -15,26 +15,34 @@ struct Position {
     bool operator==(const Position &o) const { return x == o.x && y == o.y; }
 };
 
-enum class Scene {
+enum class SceneId {
     MENU,
     CONFIG,
     GAME,
     DIE,
 };
 
+// -- Direction enum (replaces old Event::UP/DOWN/LEFT/RIGHT) --
+enum class Direction {
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+};
+
 struct SnakeState {
     std::deque<Position> body;
-    Event curDir = Event::DOWN;
+    Direction curDir = Direction::DOWN;
     int curSpeed = 1;
 
     void reset() {
         body.clear();
-        curDir = Event::DOWN;
+        curDir = Direction::DOWN;
         curSpeed = 1;
     }
 };
 
-// utility ────────────────────────────────────────
+// utility ----------------------------------------
 
 inline Position random_apple_pos(const SnakeState &p1, const SnakeState &p2) {
     static std::mt19937 rng{std::random_device{}()};
