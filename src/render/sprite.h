@@ -3,6 +3,8 @@
 #include "raylib.h"
 #include "render/render.h"
 #include <string>
+#include<iostream>
+using std::cerr;
 
 // 基于 raylib 的简单 Sprite
 // Image 在构造时载入；Texture2D 仅在 update 检测到新帧时更新；析构时 Unload
@@ -10,29 +12,13 @@ class Sprite : public Basic_Render_Class
 {
 public:
     // Load Image from file;
-    explicit Sprite(const std::string& path)
-    {
-        image = LoadImage(path.c_str());
-    }
-
-    // Copy Image; caller may UnloadImage separately
-    explicit Sprite(Image src = {})
-    {
-        if (src.data != nullptr)
-        {
-            image = ImageCopy(src);
-        }
-    }
+    explicit Sprite(const std::string& path):imagepath(path){}
 
     ~Sprite()
     {
         if (texture.id != 0)
         {
             UnloadTexture(texture);
-        }
-        if (image.data != nullptr)
-        {
-            UnloadImage(image);
         }
     }
 
@@ -261,6 +247,7 @@ public:
     }
 
 private:
+    std::string imagepath;
     Image image{};            // Sprite sheet source image, loaded at construction
     Texture2D texture{};      // Current frame texture, updated only in update()
     int texture_frame = -1;   // Frame index matching current texture; -1 = not yet generated
@@ -285,20 +272,20 @@ private:
     // Crop one frame from image according to current frame index, rebuild texture
     void refresh_texture()
     {
+        image = LoadImage(imagepath.c_str());
         if (image.data == nullptr || hframes < 1 || vframes < 1)
         {
             return;
         }
-
         if (texture.id != 0)
         {
             UnloadTexture(texture);
             texture = {};
         }
-
         if (hframes == 1 && vframes == 1)
         {
             texture = LoadTextureFromImage(image);
+            UnloadImage(image);
             return;
         }
 
@@ -311,5 +298,6 @@ private:
         Image frame_img = ImageFromImage(image, crop);
         texture = LoadTextureFromImage(frame_img);
         UnloadImage(frame_img);
+        UnloadImage(image);
     }
 };

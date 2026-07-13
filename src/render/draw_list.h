@@ -19,10 +19,8 @@ public:
     using DrawIter = std::list<DrawEntry>::iterator;
     void update()
     {
-        std::cerr << "##################Into the draw.update()\n";
         for (DrawIter it = g_draw_list.begin(); it != g_draw_list.end(); )
         {
-            std::cerr << "##################it++\n";
             if (it->deleted)
             {
                 it = g_draw_list.erase(it);

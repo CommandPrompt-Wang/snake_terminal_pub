@@ -148,7 +148,6 @@ void GameScene::on_inputevent(InputEvent& event) {
 
 void GameScene::update(float dt) {
     consume_pending_dir();
-    std::cerr << "##################begin to update\n";
     // speed boost
     if (game_config().allowAcceleration) {
         int s1 = (IsKeyDown(KEY_W) || IsKeyDown(KEY_S) || IsKeyDown(KEY_A) || IsKeyDown(KEY_D)) ? 2 : 1;
@@ -181,9 +180,7 @@ void GameScene::update(float dt) {
             finished_ = true;
         }
     }
-    std::cerr << "##################begin to draw update\n";
     draw_list_.update();
-    std::cerr << "##################update finished\n";
 }
 
 void GameScene::render() {

@@ -191,20 +191,8 @@ public:
         if(snake == nullptr)return;
         while (body.size() < snake->body.size())
         {
-            std::cerr << "##################body.size() = " << body.size() << " snake.size = " << snake->body.size() << std::endl;
-            std::cerr << "try to epb a block\n";
-            
-            auto tmp = Snake_Block(playerid, (Vector2){0, 0},head,head + 1);
-            
-            std::cerr << "generate tmp successful\n";
-
-            body.emplace_back(tmp);
-
-            std::cerr << "epb a block successful\n";
-            std::cerr << "##################body.size() = " << body.size() << " snake.size = " << snake->body.size() << std::endl;
+            body.emplace_back(playerid, (Vector2){0, 0},head,head + 1);
         }
-        std::cerr << "##################now : body.size() = " << body.size();
-        std::cerr << " snake.size() = " << (*snake).body.size() << std::endl;
         for (int i = 0;i < body.size();i++)
         {
             body[i].set_pos(snake->body[i].x,snake->body[i].y);
