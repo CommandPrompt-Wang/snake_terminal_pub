@@ -19,9 +19,9 @@ inline bool operator == (const Vector2& a,const Vector2& b)
 class Snake_Block : public Basic_Render_Class
 {
 public:
-    Snake_Block (int playerid = 0, Vector2 pos = {0,0},Sprite* head0 = nullptr, Sprite* head1 = nullptr)
+    Snake_Block (int playerid = 0, Vector2 pos = {0,0})
     :
-    playerid(playerid), pos(pos),head{head0, head1},
+    playerid(playerid), pos(pos),
     side{Sprite("resources/up_side.png"),Sprite("resources/right_side.png"),Sprite("resources/up_side.png"),Sprite("resources/right_side.png")},
     speedup{Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png"),Sprite("resources/up_speed_side.png"),Sprite("resources/right_speed_side.png")},
     fill(Sprite("resources/player" + std::to_string(playerid) + "fill.png"))
@@ -36,50 +36,32 @@ public:
     void set_status (Snake_Block *pre, Snake_Block *nxt, bool speed_up = false)
     {
         side_status[0] = side_status[1] = side_status[2] = side_status[3] = 0;
-        fill.set_hide(0);is_head = false;this->speed_up = speed_up;
+        fill.set_hide(0);this->speed_up = speed_up;
 
-        if (pre == nullptr)
-        {
-            is_head = true;
-        }
-        else for (int i = 0;i < 4;i++)
+        if(pre != nullptr)for (int i = 0;i < 4;i++)
         {
             side_status[i] |= (pre->pos == pos + mv[i]);
         }
 
-        if (nxt != nullptr)
+        if (nxt != nullptr)for (int i = 0;i < 4;i++)
         {
-            for (int i = 0;i < 4;i++)
-            {
-                side_status[i] |= (nxt->pos == pos + mv[i]);
-            }
+            side_status[i] |= (nxt->pos == pos + mv[i]);
         }
     }
-
+    const Vector2 get_pos(){return pos;}
     void set_scale(Vector2 scale)
     {
         this->scale = scale;
-        if (is_head)
-        {
-            head[0]->set_scale(scale);
-            head[1]->set_scale(scale);
-        }
         side[0].set_scale(scale);side[1].set_scale(scale);side[2].set_scale(scale);side[3].set_scale(scale);
         speedup[0].set_scale(scale);speedup[1].set_scale(scale);speedup[2].set_scale(scale);speedup[3].set_scale(scale);
         fill.set_scale(scale);
     }
 
-    void set_dir(Direction d) { dir_ = d; }
     void set_pos (Vector2 pos)
     {
         this->pos = pos;
         Vector2 draw_position = Vector2{32 * pos.x, 32 * pos.y} + Vector2{0, 200};
         fill.set_pos(draw_position);
-        if (is_head)
-        {
-            head[0]->set_pos(draw_position);
-            head[1]->set_pos(draw_position);
-        }
         side[0].set_pos(draw_position);side[1].set_pos(draw_position);side[2].set_pos(draw_position);side[3].set_pos(draw_position);
         speedup[0].set_pos(draw_position);speedup[1].set_pos(draw_position);speedup[2].set_pos(draw_position);speedup[3].set_pos(draw_position);
     }
@@ -91,36 +73,6 @@ public:
     void draw ()
     {
         fill.draw();
-        if (is_head)
-        {
-            switch (dir_)
-            {
-                case Direction::UP :
-                {
-                    head[0]->set_flip_v(0);head[0]->set_hide(0);
-                    head[0]->update();head[0]->draw();
-                    break;
-                }
-                case Direction::RIGHT :
-                {
-                    head[1]->set_flip_h(0);head[1]->set_hide(0);
-                    head[1]->update();head[1]->draw();
-                    break;
-                }
-                case Direction::DOWN :
-                {
-                    head[0]->set_flip_v(1);head[0]->set_hide(0);
-                    head[0]->update();head[0]->draw();
-                    break;
-                }
-                case Direction::LEFT :
-                {
-                    head[1]->set_flip_h(1);head[1]->set_hide(0);
-                    head[1]->update();head[1]->draw();
-                    break;
-                }
-            }
-        }
         for(int i = 0;i < 4;i++)
         {
             if (side_status[i] == 0)
@@ -140,11 +92,6 @@ public:
     }
     void update ()
     {
-        if (is_head)
-        {
-            head[0]->update();
-            head[1]->update();
-        }
         side[0].update();side[1].update();side[2].update();side[3].update();
         speedup[0].update();speedup[1].update();speedup[2].update();speedup[3].update();
         fill.update();
@@ -154,9 +101,7 @@ private:
     std::array<Sprite, 4> speedup;
     Sprite fill;
 
-    Sprite *head[2];
-    bool is_head = false,speed_up = false;
-    Direction dir_ = Direction::UP;
+    bool speed_up = false;
 
     Vector2 pos{0, 0};
     Vector2 scale{1, 1};
@@ -184,24 +129,59 @@ private:
     int playerid;
     Vector2 scale = {1, 1};//设置缩放
 public:
-    Snake_Body (SnakeState* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid) {}
-
+    Snake_Body (SnakeState* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid)
+    {
+    }
+    void set_scale (Vector2 scale)
+    {
+        this->scale = scale;
+        for(auto &i : body)i.set_scale(scale);
+        head[0].set_scale(scale);
+        head[1].set_scale(scale);
+    }
     void update ()
     {
         if(snake == nullptr)return;
+        switch (snake->curDir)
+        {
+            case Direction::UP :
+            {
+                head[0].set_flip_v(0);head[0].set_hide(0);
+                head[0].update();
+                head[1].set_hide(1);
+                break;
+            }
+            case Direction::RIGHT :
+            {
+                head[1].set_flip_h(0);head[1].set_hide(0);
+                head[1].update();
+                head[0].set_hide(1);
+                break;
+            }
+            case Direction::DOWN :
+            {
+                head[0].set_flip_v(1);head[0].set_hide(0);
+                head[0].update();
+                head[1].set_hide(1);
+                break;
+            }
+            case Direction::LEFT :
+            {
+                head[1].set_flip_h(1);head[1].set_hide(0);
+                head[1].update();
+                head[0].set_hide(1);
+                break;
+            }
+        }
         while (body.size() < snake->body.size())
         {
-            std::cerr << "##################body.size() = " << body.size() << " snake.size = " << snake->body.size() << std::endl;
-            std::cerr << "try to epb a block\n";
-            
-            auto tmp = Snake_Block(playerid, (Vector2){0, 0},head,head + 1);
-            
-            std::cerr << "generated Snake_Block at " << &tmp << std::endl;
-
-            body.emplace_back(tmp);
-
-            std::cerr << "epb a block successful\n";
-            std::cerr << "##################body.size() = " << body.size() << " snake.size = " << snake->body.size() << std::endl;
+            body.emplace_back(playerid, (Vector2){0, 0});
+            body.back().set_scale(scale);
+        }
+        if(snake->body.size() != 0)
+        {
+            head[0].set_pos(snake->body[0].x,snake->body[0].y);
+            head[1].set_pos(snake->body[0].x,snake->body[0].y);
         }
         for (int i = 0;i < body.size();i++)
         {
@@ -219,6 +199,14 @@ public:
     {
         if(snake == nullptr)return;
         for(auto &i : body)i.draw();
+        head[0].draw();head[1].draw();
+    }
+    void print_pos()
+    {
+        for(auto &i : body)
+        {
+            std::cerr << "##############(" << i.get_pos().x << ", " << i.get_pos().y << ")\n";
+        }
     }
     ~Snake_Body ()
     {

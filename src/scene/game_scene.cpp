@@ -109,8 +109,10 @@ void GameScene::on_enter() {
     last_tick_ = Clock::now();
     
     snake_body_1 = Snake_Body(&p1_, 1);
+    snake_body_1.set_scale({2.0,2.0});
     draw_list_.push_back(&snake_body_1);
     snake_body_2 = Snake_Body(&p2_, 2);
+    snake_body_2.set_scale({2.0,2.0});
     draw_list_.push_back(&snake_body_2);
 }
 
