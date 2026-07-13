@@ -208,7 +208,10 @@ public:
     void draw()
     {
         if (hide) return;
-        refresh_texture();
+        if (texture_frame != frame) {
+            refresh_texture();
+            texture_frame = frame;
+        }
 
         Rectangle src{
             0.0f,
