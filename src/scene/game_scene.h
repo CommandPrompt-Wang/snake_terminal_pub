@@ -16,10 +16,7 @@
 #include <vector>
 
 // -- GameScene --------------------------------------
-// The main game scene. The game logic from input_thread.cpp runs here as a callback.
-//
-// Event-driven: instead of polling EventServer state variables,
-// SceneManager constructs InputEvent and dispatches via handle_event().
+// The main game scene, now using the Snake class for snake management.
 class GameScene : public Scene {
 public:
     GameScene();
@@ -39,21 +36,12 @@ protected:
     void on_inputevent(InputEvent& event) override;
 
 private:
-    // -- helpers --
-    static bool is_opposite(Direction a, Direction b);
-    static Position next_head(const SnakeState &s);
-    static bool on_body(const std::deque<Position> &body, const Position &p, int skipFront = 0);
-    static Position random_safe_pos(const SnakeState &p1, const SnakeState &p2);
-    void init_snake(SnakeState &s, int startX, int startY, Direction dir, int len);
-    bool respawn_player(SnakeState &p, const SnakeState &other, int player);
-    bool tick_player(SnakeState &p, int player, const SnakeState &other, Position &apple);
+    // -- helper --
     void consume_pending_dir();
 
     // -- state --
-    SnakeState p1_, p2_;
+    Snake p1_{1}, p2_{2};
     Position apple_{-1, -1};
-    int score1_ = 0, score2_ = 0;
-    int speed1_ = 1, speed2_ = 1;
     bool finished_ = false;
     int next_scene_id_ = static_cast<int>(SceneId::DIE);
 
@@ -70,7 +58,6 @@ private:
 
     // rendering
     Draw_List draw_list_;
-    std::vector<std::unique_ptr<Snake_Block>> snake_blocks_;
     Snake_Body snake_body_1_{nullptr, 0};
     Snake_Body snake_body_2_{nullptr, 0};
 

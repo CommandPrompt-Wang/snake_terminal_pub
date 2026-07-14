@@ -1,0 +1,213 @@
+#include "game/snake.h"
+#include "global.h"
+
+// ── 静态成员 ──
+std::mt19937 Snake::rng_{std::random_device{}()};
+
+// ── 构造 ──
+Snake::Snake(int playerId)
+    : playerId_(playerId) {}
+
+// ── 初始化 / 重置 ──
+
+void Snake::init(int startX, int startY, Direction dir, int len) {
+    body_.clear();
+    curDir_ = dir;
+    lastMoveDir_ = dir;
+    curSpeed_ = 1;
+    for (int i = 0; i < len; ++i) {
+        if (dir == Direction::LEFT)  body_.push_back({startX + i, startY});
+        if (dir == Direction::RIGHT) body_.push_back({startX - i, startY});
+        if (dir == Direction::UP)    body_.push_back({startX, startY + i});
+        if (dir == Direction::DOWN)  body_.push_back({startX, startY - i});
+    }
+}
+
+void Snake::reset() {
+    body_.clear();
+    curDir_ = Direction::DOWN;
+    lastMoveDir_ = Direction::DOWN;
+    curSpeed_ = 1;
+    score_ = 0;
+}
+
+// ── 方向工具 ──
+
+bool Snake::is_opposite(Direction a, Direction b) {
+    return (a == Direction::UP    && b == Direction::DOWN)  ||
+           (a == Direction::DOWN  && b == Direction::UP)    ||
+           (a == Direction::LEFT  && b == Direction::RIGHT) ||
+           (a == Direction::RIGHT && b == Direction::LEFT);
+}
+
+// ── 碰撞检测 ──
+
+Position Snake::next_head() const {
+    Position h = body_.front();
+    switch (curDir_) {
+        case Direction::UP:    h.y -= 1; break;
+        case Direction::DOWN:  h.y += 1; break;
+        case Direction::LEFT:  h.x -= 1; break;
+        case Direction::RIGHT: h.x += 1; break;
+    }
+    return h;
+}
+
+bool Snake::check_self_collision(const Position& h, int skipFront) const {
+    for (size_t i = skipFront; i < body_.size(); ++i)
+        if (body_[i] == h) return true;
+    return false;
+}
+
+bool Snake::check_body_collision(const std::deque<Position>& body, const Position& h) const {
+    for (auto& seg : body)
+        if (seg == h) return true;
+    return false;
+}
+
+// ── 移动 ──
+
+void Snake::push_head(const Position& h) {
+    body_.push_front(h);
+    lastMoveDir_ = curDir_;
+}
+
+void Snake::pop_tail() {
+    body_.pop_back();
+}
+
+// ── 高层操作 ──
+
+bool Snake::tick(const Snake& other, Position& apple) {
+    Position head = next_head();
+
+    // 墙壁碰撞 / 环形卷绕
+    if (!game_config().toroidalSpace) {
+        if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H) {
+            set_player_status(Global::PlayerStatus::ON_WALL);
+            return false;
+        }
+    } else {
+        if (head.x < 0) head.x = GRID_W - 1;
+        else if (head.x >= GRID_W) head.x = 0;
+        if (head.y < 0) head.y = GRID_H - 1;
+        else if (head.y >= GRID_H) head.y = 0;
+    }
+
+    // 自碰
+    if (check_self_collision(head, 1)) {
+        set_player_status(Global::PlayerStatus::ON_SELF);
+        return false;
+    }
+
+    // 碰对方
+    if (!game_config().allowThroughOthers && !other.body_.empty() &&
+        check_body_collision(other.body_, head)) {
+        set_player_status(Global::PlayerStatus::ON_PLAYER);
+        return false;
+    }
+
+    body_.push_front(head);
+    lastMoveDir_ = curDir_;
+
+    if (head == apple) {
+        ++score_;
+        apple = random_apple_pos(other);
+        if (apple.x < 0) {
+            set_player_status(Global::PlayerStatus::STARVED);
+            return false;
+        }
+    } else {
+        body_.pop_back();
+    }
+
+    return true;
+}
+
+bool Snake::respawn(const Snake& other) {
+    int deduct = game_config().reborn_costs;
+
+    // 从尾部切掉 reborn_costs 节
+    int to_remove = std::min(deduct, (int)body_.size());
+    for (int i = 0; i < to_remove; ++i)
+        body_.pop_back();
+
+    // 同步分数 = 身体长度 - 3
+    score_ = (int)body_.size() - 3;
+
+    // 身体切空了 → 饿死
+    if (body_.empty()) {
+        set_player_status(Global::PlayerStatus::STARVED);
+        return false;
+    }
+
+    // 找安全位置放置头部
+    Position pos = random_safe_pos(other);
+    if (pos.x < 0 || pos.y < 0) {
+        set_player_status(Global::PlayerStatus::STARVED);
+        return false;
+    }
+
+    // 将整条蛇平移到安全位置
+    int dx = pos.x - body_[0].x;
+    int dy = pos.y - body_[0].y;
+    for (auto& seg : body_) {
+        seg.x += dx;
+        seg.y += dy;
+    }
+
+    curSpeed_ = 1;
+    return true;
+}
+
+void Snake::remove_from_back(int count) {
+    int to_remove = std::min(count, (int)body_.size());
+    for (int i = 0; i < to_remove; ++i)
+        body_.pop_back();
+}
+
+void Snake::translate(int dx, int dy) {
+    for (auto& seg : body_) {
+        seg.x += dx;
+        seg.y += dy;
+    }
+}
+
+// ── 苹果 / 安全位置 ──
+
+Position Snake::random_apple_pos(const Snake& other) const {
+    std::uniform_int_distribution<int> dx(0, GRID_W - 1);
+    std::uniform_int_distribution<int> dy(0, GRID_H - 1);
+
+    for (int tries = 0; tries < 200; ++tries) {
+        Position p{dx(rng_), dy(rng_)};
+        bool on_snake = false;
+        for (auto& seg : body_)    if (seg == p) { on_snake = true; break; }
+        if (!on_snake)
+            for (auto& seg : other.body_) if (seg == p) { on_snake = true; break; }
+        if (!on_snake) return p;
+    }
+    return {-1, -1}; // grid full
+}
+
+Position Snake::random_safe_pos(const Snake& other) const {
+    std::uniform_int_distribution<int> dx(0, GRID_W - 1);
+    std::uniform_int_distribution<int> dy(0, GRID_H - 1);
+
+    for (int tries = 0; tries < 200; ++tries) {
+        Position p{dx(rng_), dy(rng_)};
+        bool on_snake = false;
+        for (auto& seg : body_)    if (seg == p) { on_snake = true; break; }
+        if (!on_snake)
+            for (auto& seg : other.body_) if (seg == p) { on_snake = true; break; }
+        if (!on_snake) return p;
+    }
+    return {-1, -1}; // grid full
+}
+
+// ── 内部工具 ──
+
+void Snake::set_player_status(Global::PlayerStatus status) const {
+    if (playerId_ == 1)      Global::player_status1 = status;
+    else if (playerId_ == 2) Global::player_status2 = status;
+}

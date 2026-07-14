@@ -160,12 +160,12 @@ private:
     inline static const float speedup_time = 0.6; // 加速向后传递的时间
     inline static constexpr int speedup_loop_length = 4, speedup_length = 2;//looplength表示多长一循环，speeduplength表示加速节多长
     int speedup_offset = 0;
-    SnakeState* snake;
+    Snake* snake;
     int playerid;
     bool is_hide = 0;
     Vector2 scale = {1, 1};//设置缩放
 public:
-    Snake_Body (SnakeState* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid)
+    Snake_Body (Snake* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid)
     {
         speedup_offset = 0;
         frame_process = 0;
@@ -192,7 +192,7 @@ public:
         if(playerid == 1)playerstate = Global::player_status1;
         else if(playerid == 2)playerstate = Global::player_status2;
 
-        switch (snake->curDir)
+        switch (snake->get_direction())
         {
             case Direction::UP :
             {
@@ -220,7 +220,7 @@ public:
             }
         }
         head[0].update();head[1].update();
-        bool is_speedup = snake->curSpeed >= 2;
+        bool is_speedup = snake->get_speed() >= 2;
         if (is_speedup)
         {
             frame_process += GetFrameTime();
@@ -235,23 +235,23 @@ public:
             frame_process = 0;
             speedup_offset = 0;
         }
-        while (body.size() < snake->body.size())
+        while (body.size() < snake->get_body().size())
         {
             body.emplace_back(playerid, (Vector2){0, 0});
             body.back().set_scale(scale);
         }
-        while (body.size() > snake->body.size())
+        while (body.size() > snake->get_body().size())
         {
             body.pop_back();
         }
-        if(snake->body.size() != 0)
+        if(snake->get_body().size() != 0)
         {
-            head[0].set_pos(snake->body[0].x * 32 +    0,snake->body[0].y * 32 + 200);
-            head[1].set_pos(snake->body[0].x * 32 +    0,snake->body[0].y * 32 + 200);
+            head[0].set_pos(snake->get_body()[0].x * 32 +    0,snake->get_body()[0].y * 32 + 200);
+            head[1].set_pos(snake->get_body()[0].x * 32 +    0,snake->get_body()[0].y * 32 + 200);
         }
         for (int i = 0;i < body.size();i++)
         {
-            body[i].set_pos(snake->body[i].x,snake->body[i].y);
+            body[i].set_pos(snake->get_body()[i].x,snake->get_body()[i].y);
         }
         for (int i = 0;i < body.size(); i++)
         {

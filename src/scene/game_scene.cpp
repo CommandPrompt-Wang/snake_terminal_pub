@@ -7,167 +7,20 @@
 #include <array>
 #include <iostream>
 
-// -- static helpers --------------------------------
-
-bool GameScene::is_opposite(Direction a, Direction b) {
-    return (a == Direction::UP    && b == Direction::DOWN)  ||
-           (a == Direction::DOWN  && b == Direction::UP)    ||
-           (a == Direction::LEFT  && b == Direction::RIGHT) ||
-           (a == Direction::RIGHT && b == Direction::LEFT);
-}
-
-Position GameScene::next_head(const SnakeState &s) {
-    Position h = s.body.front();
-    switch (s.curDir) {
-        case Direction::UP:    h.y -= 1; break;
-        case Direction::DOWN:  h.y += 1; break;
-        case Direction::LEFT:  h.x -= 1; break;
-        case Direction::RIGHT: h.x += 1; break;
-    }
-    return h;
-}
-
-bool GameScene::on_body(const std::deque<Position> &body, const Position &p, int skipFront) {
-    for (size_t i = skipFront; i < body.size(); ++i)
-        if (body[i] == p) return true;
-    return false;
-}
-
-Position GameScene::random_safe_pos(const SnakeState &p1, const SnakeState &p2) {
-    static std::mt19937 rng{std::random_device{}()};
-    std::uniform_int_distribution<int> dx(0, GRID_W - 1);
-    std::uniform_int_distribution<int> dy(0, GRID_H - 1);
-
-    for (int tries = 0; tries < 200; ++tries) {
-        Position p{dx(rng), dy(rng)};
-        bool on_snake = false;
-        for (auto &seg : p1.body) if (seg == p) { on_snake = true; break; }
-        if (!on_snake) for (auto &seg : p2.body) if (seg == p) { on_snake = true; break; }
-        if (!on_snake) return p;
-    }
-    return {-1, -1}; // grid full
-}
-
-bool GameScene::respawn_player(SnakeState &p, const SnakeState &other, int player) {
-    int deduct = game_config().reborn_costs;
-
-    // 从尾部切掉 reborn_costs 节（最多切到空）
-    int to_remove = std::min(deduct, (int)p.body.size());
-    for (int i = 0; i < to_remove; ++i)
-        p.body.pop_back();
-
-    // 同步分数 = 身体长度 - 3（先同步，再判断饿死）
-    if (player == 1) score1_ = (int)p.body.size() - 3;
-    else             score2_ = (int)p.body.size() - 3;
-
-    // 身体切空了 → 饿死 (score = 0 - 3 = -3)
-    if (p.body.empty()) {
-        if (player == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
-        else              Global::player_status2 = Global::PlayerStatus::STARVED;
-        return false;
-    }
-
-    // 找安全位置放置头部
-    Position pos = random_safe_pos(p, other);
-    if (pos.x < 0 || pos.y < 0) {
-        // 网格满了 → 饿死
-        if (player == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
-        else              Global::player_status2 = Global::PlayerStatus::STARVED;
-        return false;
-    }
-
-    // 将整条蛇平移到安全位置
-    int dx = pos.x - p.body[0].x;
-    int dy = pos.y - p.body[0].y;
-    for (auto &seg : p.body) {
-        seg.x += dx;
-        seg.y += dy;
-    }
-
-    p.curSpeed = 1;
-    return true;
-}
-
-void GameScene::init_snake(SnakeState &s, int startX, int startY, Direction dir, int len) {
-    s.body.clear();
-    s.curDir = dir;
-    s.lastMoveDir = dir;
-    s.curSpeed = 1;
-    for (int i = 0; i < len; ++i) {
-        if (dir == Direction::LEFT)  s.body.push_back({startX + i, startY});
-        if (dir == Direction::RIGHT) s.body.push_back({startX - i, startY});
-        if (dir == Direction::UP)    s.body.push_back({startX, startY + i});
-        if (dir == Direction::DOWN)  s.body.push_back({startX, startY - i});
-    }
-}
-
-bool GameScene::tick_player(SnakeState &p, int player, const SnakeState &other, Position &apple) {
-    Position head = next_head(p);
-
-    // wall collision / wrap-around
-    if (!game_config().toroidalSpace) {
-        if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H) {
-            if (player == 1) Global::player_status1 = Global::PlayerStatus::ON_WALL;
-            else             Global::player_status2 = Global::PlayerStatus::ON_WALL;
-            return false;
-        }
-    } else {
-        if (head.x < 0) head.x = GRID_W - 1;
-        else if (head.x >= GRID_W) head.x = 0;
-        if (head.y < 0) head.y = GRID_H - 1;
-        else if (head.y >= GRID_H) head.y = 0;
-    }
-
-    // self collision
-    if (on_body(p.body, head, 1)) {
-        if (player == 1) Global::player_status1 = Global::PlayerStatus::ON_SELF;
-        else             Global::player_status2 = Global::PlayerStatus::ON_SELF;
-        return false;
-    }
-
-    // other-player collision
-    if (!game_config().allowThroughOthers && !other.body.empty() && on_body(other.body, head)) {
-        if (player == 1) Global::player_status1 = Global::PlayerStatus::ON_PLAYER;
-        else             Global::player_status2 = Global::PlayerStatus::ON_PLAYER;
-        return false;
-    }
-
-    p.body.push_front(head);
-    p.lastMoveDir = p.curDir;
-
-    if (head == apple) {
-        // 吃苹果加分
-        if (player == 1) ++score1_;
-        else             ++score2_;
-        apple = random_apple_pos(/* player1 = */ p, /* player2 = */ other);
-        if (apple.x < 0) {
-            // Grid full — starvation
-            if (player == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
-            else             Global::player_status2 = Global::PlayerStatus::STARVED;
-            return false;
-        }
-    } else {
-        p.body.pop_back();
-    }
-
-    return true;
-}
-
 // -- consume buffered direction into actual snake dir --
 void GameScene::consume_pending_dir() {
     while (!pending_dirs1_.empty()) {
         Direction d = pending_dirs1_.front();
         pending_dirs1_.pop_front();
-        // 和上一次实际移动方向比较，而非 curDir
-        if (!is_opposite(p1_.lastMoveDir, d)) {
-            p1_.curDir = d;
+        if (!Snake::is_opposite(p1_.get_last_move_dir(), d)) {
+            p1_.set_direction(d);
         }
     }
     while (!pending_dirs2_.empty()) {
         Direction d = pending_dirs2_.front();
         pending_dirs2_.pop_front();
-        if (!is_opposite(p2_.lastMoveDir, d)) {
-            p2_.curDir = d;
+        if (!Snake::is_opposite(p2_.get_last_move_dir(), d)) {
+            p2_.set_direction(d);
         }
     }
 }
@@ -184,12 +37,12 @@ void GameScene::on_enter() {
     pending_dirs1_.clear();
     pending_dirs2_.clear();
 
-    init_snake(p1_, 5, 5, Direction::DOWN, 3);
-    init_snake(p2_, GRID_W - 6, GRID_H - 6, Direction::UP, 3);
+    p1_.init(5, 5, Direction::DOWN, 3);
+    p2_.init(GRID_W - 6, GRID_H - 6, Direction::UP, 3);
+    p1_.set_score(0);
+    p2_.set_score(0);
 
-    apple_ = random_apple_pos(p1_, p2_);
-    score1_ = 0; score2_ = 0;
-    speed1_ = 1; speed2_ = 1;
+    apple_ = p1_.random_apple_pos(p2_);
     time_elapsed_ = 0;
 
     last_tick_ = Clock::now();
@@ -270,13 +123,12 @@ void GameScene::update(float dt) {
     if (game_config().allowAcceleration) {
         int s1 = IsKeyDown(KEY_LEFT_SHIFT)  ? 2 : 1;
         int s2 = IsKeyDown(KEY_RIGHT_SHIFT) ? 2 : 1;
-        p1_.curSpeed = s1;
-        p2_.curSpeed = s2;
-        speed1_ = s1; speed2_ = s2;
+        p1_.set_speed(s1);
+        p2_.set_speed(s2);
     }
 
     // tick timing (base rate, unaffected by per-player speed boost)
-    int highScore = std::max((int)p1_.body.size() - 3, (int)p2_.body.size() - 3);
+    int highScore = std::max((int)p1_.get_body().size() - 3, (int)p2_.get_body().size() - 3);
     double diffMult = 1.0;
     if (game_config().increasing_difficulty > 0) {
         double k = game_config().increasing_difficulty;
@@ -291,18 +143,14 @@ void GameScene::update(float dt) {
 
         // Each player moves curSpeed times per tick (1 = normal, 2 = boosted)
         bool alive1 = true, alive2 = true;
-        Global::PlayerStatus pstat1 = Global::PlayerStatus::NONE;
-        Global::PlayerStatus pstat2 = Global::PlayerStatus::NONE;
-        for (int i = 0; i < std::max(p1_.curSpeed, 1); ++i) {
+        for (int i = 0; i < std::max(p1_.get_speed(), 1); ++i) {
             if (alive1) {
-                alive1 = tick_player(p1_, 1, p2_, apple_);
-                if (!alive1) pstat1 = Global::player_status1;
+                alive1 = p1_.tick(p2_, apple_);
             }
         }
-        for (int i = 0; i < std::max(p2_.curSpeed, 1); ++i) {
+        for (int i = 0; i < std::max(p2_.get_speed(), 1); ++i) {
             if (alive2) {
-                alive2 = tick_player(p2_, 2, p1_, apple_);
-                if (!alive2) pstat2 = Global::player_status2;
+                alive2 = p2_.tick(p1_, apple_);
             }
         }
 
@@ -311,14 +159,14 @@ void GameScene::update(float dt) {
             bool starved = false;
 
             // 复活死亡的玩家（网格满或分数 ≤ -3 时返回 false → 饿死）
-            bool s1 = !alive1 && !respawn_player(p1_, p2_, 1);
-            bool s2 = !alive2 && !respawn_player(p2_, p1_, 2);
+            bool s1 = !alive1 && !p1_.respawn(p2_);
+            bool s2 = !alive2 && !p2_.respawn(p1_);
             if (s1 || s2) starved = true;
 
             if (starved) {
                 Global::end_reason = Global::GameOverReason::DEATH;
-                Global::last_score_player1 = score1_;
-                Global::last_score_player2 = score2_;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
                 finished_ = true;
             }
 
@@ -328,16 +176,16 @@ void GameScene::update(float dt) {
                 Global::end_reason = Global::GameOverReason::TIMEOUT;
                 Global::player_status1 = Global::PlayerStatus::ALIVE;
                 Global::player_status2 = Global::PlayerStatus::ALIVE;
-                Global::last_score_player1 = score1_;
-                Global::last_score_player2 = score2_;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
                 finished_ = true;
             }
         } else {
             // ── DEATHMATCH: 任何死亡都结束 ──
             if (!alive1 || !alive2) {
                 Global::end_reason = Global::GameOverReason::DEATH;
-                Global::last_score_player1 = score1_;
-                Global::last_score_player2 = score2_;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
                 finished_ = true;
             }
         }
@@ -370,9 +218,9 @@ void GameScene::render() {
 
     draw_list_.draw();
 
-    // 统一使用 score1_/score2_ 显示
-    DrawText(TextFormat("P1: %d", score1_), 10, 10, 20, DARKGREEN);
-    DrawText(TextFormat("P2: %d", score2_), 10, 40, 20, DARKBLUE);
+    // 统一使用 Snake::get_score() 显示
+    DrawText(TextFormat("P1: %d", p1_.get_score()), 10, 10, 20, DARKGREEN);
+    DrawText(TextFormat("P2: %d", p2_.get_score()), 10, 40, 20, DARKBLUE);
 
     if (Global::last_game_mode == Global::GameMode::TIMERACE) {
         int dur = game_config().time_match_duration;
