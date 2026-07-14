@@ -196,7 +196,7 @@ void ConfigScene::render() {
         }
 
         if (selected) {
-            // ── Highlighted option ──
+            // -- Highlighted option --
             char lineBuf[96];
             if (isBack) {
                 std::snprintf(lineBuf, sizeof(lineBuf), "%s", labels[i]);
@@ -213,7 +213,7 @@ void ConfigScene::render() {
                      y + (h - optFont) / 2,
                      optFont, BLACK);
         } else {
-            // ── Normal option ──
+            // -- Normal option --
             char lineBuf[80];
             if (isBack) {
                 std::snprintf(lineBuf, sizeof(lineBuf), "%s", labels[i]);

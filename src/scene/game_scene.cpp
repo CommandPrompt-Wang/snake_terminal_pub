@@ -37,20 +37,27 @@ void GameScene::on_enter() {
     pending_dirs1_.clear();
     pending_dirs2_.clear();
 
+    // 重置全局状态
+    Global::player_status1 = Global::PlayerStatus::ALIVE;
+    Global::player_status2 = Global::PlayerStatus::ALIVE;
+    Global::end_reason = Global::GameOverReason::NONE;
+
     p1_.init(5, 5, Direction::DOWN, 3);
     p2_.init(GRID_W - 6, GRID_H - 6, Direction::UP, 3);
     p1_.set_score(0);
     p2_.set_score(0);
+    p1_.set_animation_status(Snake::AnimationStatus::MOVE);
+    p2_.set_animation_status(Snake::AnimationStatus::MOVE);
 
-    apple_ = p1_.random_apple_pos(p2_);
+    apple_ = random_apple_pos(p1_, p2_);
     time_elapsed_ = 0;
 
     last_tick_ = Clock::now();
     
-    snake_body_1_ = Snake_Body(&p1_, 1);
+    snake_body_1_ = SnakeBody(&p1_, 1);
     snake_body_1_.set_scale({2.0,2.0});
     draw_list_.push_back(&snake_body_1_);
-    snake_body_2_ = Snake_Body(&p2_, 2);
+    snake_body_2_ = SnakeBody(&p2_, 2);
     snake_body_2_.set_scale({2.0,2.0});
     draw_list_.push_back(&snake_body_2_);
 }
@@ -66,17 +73,62 @@ void GameScene::on_exit() {
 void GameScene::on_inputevent(InputEvent& event) {
     if (!event.is_key_press()) return;
 
+    // 尝试按键重生：WAITING 状态的蛇按下移动键时复活
+    auto handle_respawn = [&](Snake& s, const Snake& other,
+                              Direction dir, std::deque<Direction>& pending) -> bool {
+        if (s.get_animation_status() != Snake::AnimationStatus::WAITING)
+            return false; // 不由本 handler 处理
+
+        if (!s.respawn(other)) {
+            // 饿死 → 游戏结束
+            Global::end_reason = Global::GameOverReason::DEATH;
+            Global::last_score_player1 = p1_.get_score();
+            Global::last_score_player2 = p2_.get_score();
+            finished_ = true;
+        } else {
+            s.set_animation_status(Snake::AnimationStatus::MOVE);
+            pending.push_back(dir); // 把该方向记入输入缓冲
+        }
+        return true; // 已消费
+    };
+
     switch (event.get_key_code()) {
-        case KEY_W: pending_dirs1_.push_back(Direction::UP);    break;
-        case KEY_S: pending_dirs1_.push_back(Direction::DOWN);  break;
-        case KEY_A: pending_dirs1_.push_back(Direction::LEFT);  break;
-        case KEY_D: pending_dirs1_.push_back(Direction::RIGHT); break;
-        case KEY_I:    pending_dirs2_.push_back(Direction::UP);    break;
-        case KEY_K:  pending_dirs2_.push_back(Direction::DOWN);  break;
-        case KEY_J:  pending_dirs2_.push_back(Direction::LEFT);  break;
-        case KEY_L: pending_dirs2_.push_back(Direction::RIGHT); break;
+        // -- P1 移动键（WASD）--
+        case KEY_W:
+            if (handle_respawn(p1_, p2_, Direction::UP, pending_dirs1_)) break;
+            pending_dirs1_.push_back(Direction::UP);
+            break;
+        case KEY_S:
+            if (handle_respawn(p1_, p2_, Direction::DOWN, pending_dirs1_)) break;
+            pending_dirs1_.push_back(Direction::DOWN);
+            break;
+        case KEY_A:
+            if (handle_respawn(p1_, p2_, Direction::LEFT, pending_dirs1_)) break;
+            pending_dirs1_.push_back(Direction::LEFT);
+            break;
+        case KEY_D:
+            if (handle_respawn(p1_, p2_, Direction::RIGHT, pending_dirs1_)) break;
+            pending_dirs1_.push_back(Direction::RIGHT);
+            break;
+        // -- P2 移动键（IJKL）--
+        case KEY_I:
+            if (handle_respawn(p2_, p1_, Direction::UP, pending_dirs2_)) break;
+            pending_dirs2_.push_back(Direction::UP);
+            break;
+        case KEY_K:
+            if (handle_respawn(p2_, p1_, Direction::DOWN, pending_dirs2_)) break;
+            pending_dirs2_.push_back(Direction::DOWN);
+            break;
+        case KEY_J:
+            if (handle_respawn(p2_, p1_, Direction::LEFT, pending_dirs2_)) break;
+            pending_dirs2_.push_back(Direction::LEFT);
+            break;
+        case KEY_L:
+            if (handle_respawn(p2_, p1_, Direction::RIGHT, pending_dirs2_)) break;
+            pending_dirs2_.push_back(Direction::RIGHT);
+            break;
         
-        // menu
+        // -- 菜单 --
         case KEY_T:
             if (pause) {
                 finished_ = true;
@@ -84,19 +136,13 @@ void GameScene::on_inputevent(InputEvent& event) {
             }
             event.consume();
             break;
-        // shouldn't do this otherwise will cause segment fault
-        // case KEY_Q:
-        //     Global::request_quit();
-        //     event.consume();
-        //     break;
-        // default: break;
         case KEY_BACKSPACE:
         case KEY_ESCAPE:
             pause = !pause;
             event.consume();
             break;
 
-        // settling the game
+        // -- 手动结束 --
         case KEY_Y:
             if (pause) {
                 finished_ = true;
@@ -115,19 +161,36 @@ void GameScene::update(float dt) {
         return;
     }
 
-    // TIMERACE: 累计经过时间
     time_elapsed_ += dt;
 
-    consume_pending_dir();
-    // speed boost
-    if (game_config().allowAcceleration) {
-        int s1 = IsKeyDown(KEY_LEFT_SHIFT)  ? 2 : 1;
-        int s2 = IsKeyDown(KEY_RIGHT_SHIFT) ? 2 : 1;
-        p1_.set_speed(s1);
-        p2_.set_speed(s2);
+    // 1. 解析 WAITING 状态（由 SnakeBody 渲染层管理 DYING -> WAITING）
+    //    - DEATHMATCH: 双蛇 WAITING → 结束（活的蛇已在 tick 后被设为 WAITING）
+    //    - TIMERACE:   等待玩家按键重生，这里不做任何操作
+    if (Global::last_game_mode == Global::GameMode::DEATHMATCH &&
+        p1_.get_animation_status() == Snake::AnimationStatus::WAITING &&
+        p2_.get_animation_status() == Snake::AnimationStatus::WAITING) {
+        Global::end_reason = Global::GameOverReason::DEATH;
+        Global::last_score_player1 = p1_.get_score();
+        Global::last_score_player2 = p2_.get_score();
+        finished_ = true;
     }
 
-    // tick timing (base rate, unaffected by per-player speed boost)
+    if (finished_) {
+        draw_list_.update();
+        return;
+    }
+
+    // 2. 输入 + 加速（仅 MOVE 状态的蛇）
+    consume_pending_dir();
+
+    if (game_config().allowAcceleration) {
+        if (p1_.get_animation_status() == Snake::AnimationStatus::MOVE)
+            p1_.set_speed(IsKeyDown(KEY_LEFT_SHIFT) ? 2 : 1);
+        if (p2_.get_animation_status() == Snake::AnimationStatus::MOVE)
+            p2_.set_speed(IsKeyDown(KEY_RIGHT_SHIFT) ? 2 : 1);
+    }
+
+    // 3. Tick 定时
     int highScore = std::max((int)p1_.get_body().size() - 3, (int)p2_.get_body().size() - 3);
     double diffMult = 1.0;
     if (game_config().increasing_difficulty > 0) {
@@ -138,58 +201,66 @@ void GameScene::update(float dt) {
     double tickMs = 500.0 / (diffMult * spd);
     auto now = Clock::now();
     auto interval = std::chrono::milliseconds(static_cast<int>(tickMs));
+
     if (now - last_tick_ >= interval) {
         last_tick_ = now;
 
-        // Each player moves curSpeed times per tick (1 = normal, 2 = boosted)
-        bool alive1 = true, alive2 = true;
-        for (int i = 0; i < std::max(p1_.get_speed(), 1); ++i) {
-            if (alive1) {
-                alive1 = p1_.tick(p2_, apple_);
+        // -- 仅 MOVE 状态的蛇参与 tick --
+        // 先收集死亡结果，双方 tick 完成后再统一处理
+        bool died1 = false, died2 = false;
+
+        // P1 tick
+        if (p1_.get_animation_status() == Snake::AnimationStatus::MOVE) {
+            for (int i = 0; i < std::max(p1_.get_speed(), 1); ++i) {
+                if (!p1_.tick(p2_, apple_)) {
+                    died1 = true;
+                    break;
+                }
             }
         }
-        for (int i = 0; i < std::max(p2_.get_speed(), 1); ++i) {
-            if (alive2) {
-                alive2 = p2_.tick(p1_, apple_);
+
+        // P2 tick（即使 P1 死了也要让 P2 完成 tick，不漏双死）
+        if (p2_.get_animation_status() == Snake::AnimationStatus::MOVE) {
+            for (int i = 0; i < std::max(p2_.get_speed(), 1); ++i) {
+                if (!p2_.tick(p1_, apple_)) {
+                    died2 = true;
+                    break;
+                }
             }
         }
 
-        if (Global::last_game_mode == Global::GameMode::TIMERACE) {
-            // ── TIMERACE: 死亡复活 + 扣分；仅饿死 / 超时真正结束 ──
-            bool starved = false;
-
-            // 复活死亡的玩家（网格满或分数 ≤ -3 时返回 false → 饿死）
-            bool s1 = !alive1 && !p1_.respawn(p2_);
-            bool s2 = !alive2 && !p2_.respawn(p1_);
-            if (s1 || s2) starved = true;
-
-            if (starved) {
-                Global::end_reason = Global::GameOverReason::DEATH;
-                Global::last_score_player1 = p1_.get_score();
-                Global::last_score_player2 = p2_.get_score();
-                finished_ = true;
+        // 统一处理死亡
+        auto apply_death = [&](Snake& s) {
+            // TIMERACE 下身体不够扣重生成本 → 立即饿死
+            if (Global::last_game_mode == Global::GameMode::TIMERACE) {
+                int deduct = game_config().reborn_costs;
+                if ((int)s.get_body().size() <= deduct) {
+                    s.add_score(-deduct);
+                    // tick() 记录了碰撞死因（如 ON_WALL），但这里是饿死，覆盖
+                    if (s.get_player_id() == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
+                    else                        Global::player_status2 = Global::PlayerStatus::STARVED;
+                    Global::end_reason = Global::GameOverReason::DEATH;
+                    Global::last_score_player1 = p1_.get_score();
+                    Global::last_score_player2 = p2_.get_score();
+                    finished_ = true;
+                    return;
+                }
             }
+            s.set_animation_status(Snake::AnimationStatus::DYING);
+        };
+        if (died1) apply_death(p1_);
+        if (died2) apply_death(p2_);
 
-            // 超时检查
-            int dur = game_config().time_match_duration;
-            if (dur > 0 && time_elapsed_ >= dur) {
-                Global::end_reason = Global::GameOverReason::TIMEOUT;
-                Global::player_status1 = Global::PlayerStatus::ALIVE;
-                Global::player_status2 = Global::PlayerStatus::ALIVE;
-                Global::last_score_player1 = p1_.get_score();
-                Global::last_score_player2 = p2_.get_score();
-                finished_ = true;
-            }
-        } else {
-            // ── DEATHMATCH: 任何死亡都结束 ──
-            if (!alive1 || !alive2) {
-                Global::end_reason = Global::GameOverReason::DEATH;
-                Global::last_score_player1 = p1_.get_score();
-                Global::last_score_player2 = p2_.get_score();
-                finished_ = true;
-            }
+        // DEATHMATCH：死的动画，活的立即等待
+        if (!finished_ && Global::last_game_mode == Global::GameMode::DEATHMATCH) {
+            if (died1 && !died2)
+                p2_.set_animation_status(Snake::AnimationStatus::WAITING);
+            if (died2 && !died1)
+                p1_.set_animation_status(Snake::AnimationStatus::WAITING);
+            // died1 && died2 → 都 DYING，在 WAITING 解析处等动画播完
         }
     }
+
     draw_list_.update();
 }
 

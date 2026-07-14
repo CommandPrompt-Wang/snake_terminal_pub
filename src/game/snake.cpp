@@ -1,14 +1,14 @@
 #include "game/snake.h"
 #include "global.h"
 
-// ── 静态成员 ──
+// -- 静态成员 --
 std::mt19937 Snake::rng_{std::random_device{}()};
 
-// ── 构造 ──
+// -- 构造 --
 Snake::Snake(int playerId)
     : playerId_(playerId) {}
 
-// ── 初始化 / 重置 ──
+// -- 初始化 / 重置 --
 
 void Snake::init(int startX, int startY, Direction dir, int len) {
     body_.clear();
@@ -31,7 +31,7 @@ void Snake::reset() {
     score_ = 0;
 }
 
-// ── 方向工具 ──
+// -- 方向工具 --
 
 bool Snake::is_opposite(Direction a, Direction b) {
     return (a == Direction::UP    && b == Direction::DOWN)  ||
@@ -40,7 +40,7 @@ bool Snake::is_opposite(Direction a, Direction b) {
            (a == Direction::RIGHT && b == Direction::LEFT);
 }
 
-// ── 碰撞检测 ──
+// -- 碰撞检测 --
 
 Position Snake::next_head() const {
     Position h = body_.front();
@@ -65,7 +65,7 @@ bool Snake::check_body_collision(const std::deque<Position>& body, const Positio
     return false;
 }
 
-// ── 移动 ──
+// -- 移动 --
 
 void Snake::push_head(const Position& h) {
     body_.push_front(h);
@@ -76,7 +76,7 @@ void Snake::pop_tail() {
     body_.pop_back();
 }
 
-// ── 高层操作 ──
+// -- 高层操作 --
 
 bool Snake::tick(const Snake& other, Position& apple) {
     Position head = next_head();
@@ -100,9 +100,11 @@ bool Snake::tick(const Snake& other, Position& apple) {
         return false;
     }
 
-    // 碰对方
+    // 碰对方（常规碰撞 + 头碰头互撞 / 同格）
     if (!game_config().allowThroughOthers && !other.body_.empty() &&
-        check_body_collision(other.body_, head)) {
+        (check_body_collision(other.body_, head) ||
+         other.next_head() == body_.front() ||
+         head == other.next_head())) {
         set_player_status(Global::PlayerStatus::ON_PLAYER);
         return false;
     }
@@ -112,7 +114,7 @@ bool Snake::tick(const Snake& other, Position& apple) {
 
     if (head == apple) {
         ++score_;
-        apple = random_apple_pos(other);
+        apple = random_apple_pos(*this, other);
         if (apple.x < 0) {
             set_player_status(Global::PlayerStatus::STARVED);
             return false;
@@ -142,7 +144,7 @@ bool Snake::respawn(const Snake& other) {
     }
 
     // 找安全位置放置头部
-    Position pos = random_safe_pos(other);
+    Position pos = random_safe_pos(*this, other);
     if (pos.x < 0 || pos.y < 0) {
         set_player_status(Global::PlayerStatus::STARVED);
         return false;
@@ -173,39 +175,39 @@ void Snake::translate(int dx, int dy) {
     }
 }
 
-// ── 苹果 / 安全位置 ──
+// -- 苹果 / 安全位置（friend 自由函数）--
 
-Position Snake::random_apple_pos(const Snake& other) const {
+Position random_apple_pos(const Snake& a, const Snake& b) {
     std::uniform_int_distribution<int> dx(0, GRID_W - 1);
     std::uniform_int_distribution<int> dy(0, GRID_H - 1);
 
     for (int tries = 0; tries < 200; ++tries) {
-        Position p{dx(rng_), dy(rng_)};
+        Position p{dx(Snake::rng_), dy(Snake::rng_)};
         bool on_snake = false;
-        for (auto& seg : body_)    if (seg == p) { on_snake = true; break; }
+        for (auto& seg : a.body_) if (seg == p) { on_snake = true; break; }
         if (!on_snake)
-            for (auto& seg : other.body_) if (seg == p) { on_snake = true; break; }
+            for (auto& seg : b.body_) if (seg == p) { on_snake = true; break; }
         if (!on_snake) return p;
     }
     return {-1, -1}; // grid full
 }
 
-Position Snake::random_safe_pos(const Snake& other) const {
+Position random_safe_pos(const Snake& a, const Snake& b) {
     std::uniform_int_distribution<int> dx(0, GRID_W - 1);
     std::uniform_int_distribution<int> dy(0, GRID_H - 1);
 
     for (int tries = 0; tries < 200; ++tries) {
-        Position p{dx(rng_), dy(rng_)};
+        Position p{dx(Snake::rng_), dy(Snake::rng_)};
         bool on_snake = false;
-        for (auto& seg : body_)    if (seg == p) { on_snake = true; break; }
+        for (auto& seg : a.body_) if (seg == p) { on_snake = true; break; }
         if (!on_snake)
-            for (auto& seg : other.body_) if (seg == p) { on_snake = true; break; }
+            for (auto& seg : b.body_) if (seg == p) { on_snake = true; break; }
         if (!on_snake) return p;
     }
     return {-1, -1}; // grid full
 }
 
-// ── 内部工具 ──
+// -- 内部工具 --
 
 void Snake::set_player_status(Global::PlayerStatus status) const {
     if (playerId_ == 1)      Global::player_status1 = status;

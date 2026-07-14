@@ -1,6 +1,6 @@
 #pragma once
 
-// ── 全局共享状态（跨 Scene 共享，仅保留真正需要跨场景的） ──
+// -- 全局共享状态（跨 Scene 共享，仅保留真正需要跨场景的） --
 namespace Global {
     inline bool should_quit = false;
 

@@ -58,8 +58,8 @@ private:
 
     // rendering
     Draw_List draw_list_;
-    Snake_Body snake_body_1_{nullptr, 0};
-    Snake_Body snake_body_2_{nullptr, 0};
+    SnakeBody snake_body_1_{nullptr, 0};
+    SnakeBody snake_body_2_{nullptr, 0};
 
     // cell size for rendering
     static constexpr int CELL_SIZE = 32;
