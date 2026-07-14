@@ -1,3 +1,4 @@
+#pragma once
 #include "render/render.h"
 #include <functional>
 #include <string>

@@ -3,80 +3,12 @@
 #include "render/sprite.h"
 #include "render/render.h"
 #include "game/snake.h"
+#include "game/snake_state/animate_manager.h"
 #include "config/config.h"
 #include <string>
 #include <array>
 #include <vector>
 #include <map>
-
-class AnimateState : public Basic_Render_Class
-{
-protected:
-    std::string state_name;
-public:
-    std::string next_state;
-    virtual void update() = 0;
-    virtual void draw() = 0;
-    virtual void on_exit() = 0;
-    virtual void on_enter() = 0;
-    AnimateState(const std::string& state_name) : state_name(state_name) {}
-    AnimateState() = default;
-    virtual ~AnimateState() = default;
-};
-
-class AnimateManager : public Basic_Render_Class
-{
-private:
-    std::map<std::string, AnimateState*> mp;
-public:
-    std::string current_state = "";
-    AnimateManager() = default;
-    ~AnimateManager() { mp.clear(); }
-
-    void update()
-    {
-        if (current_state.empty()) return;
-        auto it = mp.find(current_state);
-        if (it == mp.end() || it->second == nullptr) return;
-        it->second->update();
-        if (!it->second->next_state.empty())
-        {
-            switch_state(it->second->next_state);
-        }
-    }
-
-    void draw()
-    {
-        if (current_state.empty()) return;
-        auto it = mp.find(current_state);
-        if (it == mp.end() || it->second == nullptr) return;
-        it->second->draw();
-    }
-
-    void add_state(const std::string& state_name, AnimateState& state)
-    {
-        mp[state_name] = &state;
-    }
-
-    void switch_state(const std::string& state_name)
-    {
-        if (current_state == state_name || mp.find(state_name) == mp.end()) return;
-        if (!current_state.empty())
-        {
-            auto it = mp.find(current_state);
-            if (it != mp.end() && it->second != nullptr)
-            {
-                it->second->on_exit();
-            }
-        }
-        auto it = mp.find(state_name);
-        if (it != mp.end() && it->second != nullptr)
-        {
-            current_state = state_name;
-            it->second->on_enter();
-        }
-    }
-};
 
 constexpr float eps = 1e-6;
 
