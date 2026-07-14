@@ -4,6 +4,7 @@
 #include "render/render.h"
 #include "game/snake.h"
 #include "config/config.h"
+#include "game/snake_state/animate_manager.h"
 #include <string>
 #include <array>
 #include <vector>
@@ -138,14 +139,149 @@ private:
         {-1, 0}
     };
 };
+class SnakeBody;
+class SnakeMove : public AnimateState
+{
+private:
+    SnakeBody* snakebody;
+public:
+    SnakeMove(SnakeBody* snakebody):snakebody(snakebody){}
+
+    void update()
+    {
+        switch (snakebody->snake->get_direction()) {
+            case Direction::UP: {
+                snakebody->head[0].set_flip_v(0);snakebody->head[0].set_hide(0);
+                snakebody->head[1].set_hide(1);
+                break;
+            }
+            case Direction::RIGHT: {
+                snakebody->head[1].set_flip_h(0);snakebody->head[1].set_hide(0);
+                snakebody->head[0].set_hide(1);
+                break;
+            }
+            case Direction::DOWN: {
+                snakebody->head[0].set_flip_v(1);snakebody->head[0].set_hide(0);
+                snakebody->head[1].set_hide(1);
+                break;
+            }
+            case Direction::LEFT: {
+                snakebody->head[1].set_flip_h(1);snakebody->head[1].set_hide(0);
+                snakebody->head[0].set_hide(1);
+                break;
+            }
+        }
+        snakebody->head[0].update();snakebody->head[1].update();
+        bool is_speedup = snakebody->snake->get_speed() >= 2;
+        if (is_speedup) {
+            snakebody->frame_process += GetFrameTime();
+            while (snakebody->frame_process > snakebody->speedup_duration) {
+                snakebody->frame_process -= snakebody->speedup_duration;
+                snakebody->speedup_offset = (snakebody->speedup_offset + 1) % snakebody->speedup_loop_length;
+            }
+        } else {
+            snakebody->frame_process = 0;
+            snakebody->speedup_offset = 0;
+        }
+        while (snakebody->body.size() < snakebody->snake->get_body().size()) {
+            snakebody->body.emplace_back(snakebody->playerid, (Vector2){0, 0});
+            snakebody->body.back().set_scale(snakebody->scale);
+        }
+        while (snakebody->body.size() > snakebody->snake->get_body().size()) {
+            snakebody->body.pop_back();
+        }
+        if (snakebody->snake->get_body().size() != 0) {
+            snakebody->head[0].set_pos(snakebody->snake->get_body()[0].x * 32 + 0,snakebody->snake->get_body()[0].y * 32 + 200);
+            snakebody->head[1].set_pos(snakebody->snake->get_body()[0].x * 32 + 0,snakebody->snake->get_body()[0].y * 32 + 200);
+        }
+        for (int i = 0; i < snakebody->body.size(); i++) {
+            snakebody->body[i].set_pos(snakebody->snake->get_body()[i].x,snakebody->snake->get_body()[i].y);
+        }
+        for (int i = 0; i < snakebody->body.size(); i++) {
+            SnakeBlock *pre = nullptr, *nxt = nullptr;
+            if (i - 1 >= 0) pre = &snakebody->body[i - 1];
+            if (i + 1 <= (int)snakebody->body.size() - 1) nxt = &snakebody->body[i + 1];
+            snakebody->body[i].set_status(pre, nxt, is_speedup & ((i - snakebody->speedup_offset + snakebody->speedup_loop_length) % snakebody->speedup_loop_length < snakebody->speedup_length), game_config().toroidalSpace);
+            snakebody->body[i].update();
+        }
+    }
+    void on_enter()
+    {
+        snakebody->speedup_offset = 0;
+        snakebody->frame_process = 0;
+        next_state = "";
+    }
+    void draw()
+    {
+        if(snakebody->snake == nullptr)return;
+        for (auto &i : snakebody->body) i.draw();
+        snakebody->head[0].draw();snakebody->head[1].draw();
+    }
+    void on_exit(){}
+};
+
+class SnakeDie : public AnimateState
+{
+private:
+    SnakeBody* snakebody;
+    bool pause;
+public:
+    SnakeDie(SnakeBody* snakebody):snakebody(snakebody){}
+    ~SnakeDie(){}
+    std::vector<Sprite> die_block;
+    void on_enter()
+    {
+        next_state = "";
+        pause = 0;
+        snakebody->dying_process = 0;
+        snakebody->dying_offset = 0;
+    }
+    void update()
+    {
+        if(pause)
+        {
+            on_exit();return;
+        }
+        snakebody->dying_process += GetFrameTime();
+        while(snakebody->dying_process >= snakebody->dying_duration)
+        {
+            snakebody->dying_process -= snakebody->dying_duration;
+            for(int i = snakebody->dying_offset;i < std::min((int)snakebody->body.size(),snakebody->dying_offset + snakebody->dying_length);i++)
+            {
+                die_block.emplace_back("resources/die.png");
+                die_block.back().set_scale({2,2});
+                die_block.back().set_pos(snakebody->body[i].get_pos().x * 32,snakebody->body[i].get_pos().y * 32 + 200);
+                die_block.back().set_layer(5);
+            }
+            snakebody->dying_offset += snakebody->dying_length;
+            if(snakebody->dying_offset >= snakebody->body.size())
+            {
+                next_state = "";
+            }
+        }
+    }
+    void draw()
+    {
+        if(snakebody->snake == nullptr)return;
+        for (auto &i : snakebody->body) i.draw();
+        snakebody->head[0].draw();snakebody->head[1].draw();
+        for(auto &i : die_block)i.draw();
+    }
+    void on_exit()
+    {
+        snakebody->snake->set_animation_status(Snake::AnimationStatus::WAITING);
+    }
+};
 
 class SnakeBody : public Basic_Render_Class
 {
-private:
+    friend class SnakeMove;
+    friend class SnakeDie;
+protected:
     Sprite head[2] = {Sprite("resources/up_head.png",10),Sprite("resources/right_head.png",10)};
     std::vector<SnakeBlock> body;
     float frame_process = 0;
-    inline static const float speedup_time = 0.6; // 加速向后传递的时间
+    inline static const float speedup_duration = 0.6; // 加速向后传递的时间
     inline static constexpr int speedup_loop_length = 4, speedup_length = 2;//looplength表示多长一循环，speeduplength表示加速节多长
     int speedup_offset = 0;
     Snake* snake;
@@ -154,14 +290,19 @@ private:
     Vector2 scale = {1, 1};//设置缩放
 
     // 死亡动画计时（渲染层自行管理）
-    float dying_timer_ = 0;
-    static constexpr float dying_duration_ = 1.0f;
+    float dying_process = 0;
+    static constexpr float dying_duration = 0.3f;//死亡动画向后传递的时间
+    inline static constexpr int dying_length = 1;//dyinglength表示一次传多长的死亡节
+    int dying_offset = 0;
 
+    AnimateManager animate_manager;
+    SnakeMove snakemove;
+    SnakeDie snakedie;
 public:
-    SnakeBody (Snake* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid) {
-        speedup_offset = 0;
-        frame_process = 0;
-        dying_timer_ = 0;
+    SnakeBody (Snake* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid),snakemove(this),snakedie(this){
+        animate_manager.add_state("snake_move",snakemove);
+        animate_manager.add_state("snake_die",snakedie);
+        animate_manager.switch_state("snake_move");
     }
 
     // Move-only (Sprite 是 move-only 的)
@@ -179,81 +320,15 @@ public:
 
     void update () {
         if(snake == nullptr)return;
-
-        // 死亡动画计时：渲染层自行管理 DYING → WAITING
-        if (snake->get_animation_status() == Snake::AnimationStatus::DYING) {
-            dying_timer_ += GetFrameTime();
-            if (dying_timer_ >= dying_duration_) {
-                snake->set_animation_status(Snake::AnimationStatus::WAITING);
-            }
-        } else {
-            dying_timer_ = 0;
+        if(snake->get_animation_status() ==  Snake::AnimationStatus::DYING)
+        {
+            animate_manager.switch_state("snake_die");
         }
-
-        auto playerstate = Global::PlayerStatus::ALIVE;
-        if(playerid == 1)playerstate = Global::player_status1;
-        else if(playerid == 2)playerstate = Global::player_status2;
-
-        switch (snake->get_direction()) {
-            case Direction::UP: {
-                head[0].set_flip_v(0);head[0].set_hide(0);
-                head[1].set_hide(1);
-                break;
-            }
-            case Direction::RIGHT: {
-                head[1].set_flip_h(0);head[1].set_hide(0);
-                head[0].set_hide(1);
-                break;
-            }
-            case Direction::DOWN: {
-                head[0].set_flip_v(1);head[0].set_hide(0);
-                head[1].set_hide(1);
-                break;
-            }
-            case Direction::LEFT: {
-                head[1].set_flip_h(1);head[1].set_hide(0);
-                head[0].set_hide(1);
-                break;
-            }
-        }
-        head[0].update();head[1].update();
-        bool is_speedup = snake->get_speed() >= 2;
-        if (is_speedup) {
-            frame_process += GetFrameTime();
-            while (frame_process > speedup_time) {
-                frame_process -= speedup_time;
-                speedup_offset = (speedup_offset + 1) % speedup_loop_length;
-            }
-        } else {
-            frame_process = 0;
-            speedup_offset = 0;
-        }
-        while (body.size() < snake->get_body().size()) {
-            body.emplace_back(playerid, (Vector2){0, 0});
-            body.back().set_scale(scale);
-        }
-        while (body.size() > snake->get_body().size()) {
-            body.pop_back();
-        }
-        if (snake->get_body().size() != 0) {
-            head[0].set_pos(snake->get_body()[0].x * 32 + 0,snake->get_body()[0].y * 32 + 200);
-            head[1].set_pos(snake->get_body()[0].x * 32 + 0,snake->get_body()[0].y * 32 + 200);
-        }
-        for (int i = 0; i < body.size(); i++) {
-            body[i].set_pos(snake->get_body()[i].x,snake->get_body()[i].y);
-        }
-        for (int i = 0; i < body.size(); i++) {
-            SnakeBlock *pre = nullptr, *nxt = nullptr;
-            if (i - 1 >= 0) pre = &body[i - 1];
-            if (i + 1 <= (int)body.size() - 1) nxt = &body[i + 1];
-            body[i].set_status(pre, nxt, is_speedup & ((i - speedup_offset + speedup_loop_length) % speedup_loop_length < speedup_length), game_config().toroidalSpace);
-            body[i].update();
-        }
+        animate_manager.update();
     }
     void draw () {
         if (snake == nullptr || is_hide == true) return;
-        for (auto &i : body) i.draw();
-        head[0].draw();head[1].draw();
+        animate_manager.draw();
     }
     void print_pos() {
         std::cerr << "snake : " << playerid << '\n';
@@ -264,6 +339,5 @@ public:
         }
     }
     ~SnakeBody () {
-        body.clear();
     }
 };
