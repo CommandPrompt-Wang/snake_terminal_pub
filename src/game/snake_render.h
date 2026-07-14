@@ -68,6 +68,7 @@ public:
         if (nxt != nullptr) for (int i = 0; i < 4; i++)
             side_status[i] |= check_neighbor(nxt, i);
     }
+    void set_hide(bool hide){is_hide = hide;}
     const int get_status()
     {
         int sta = 0;
@@ -98,6 +99,7 @@ public:
 
     void draw ()
     {
+        if (is_hide == true)return;
         side[0].draw();side[1].draw();side[2].draw();side[3].draw();
         speedup[0].draw();speedup[1].draw();speedup[2].draw();speedup[3].draw();
         fill.draw();
@@ -139,6 +141,7 @@ private:
     // pos 为逻辑网格坐标，实际像素位置 = pos * CELL_SIZE + OFFSET
     // 地图以左上角为原点，向右为 x+，向下为 y+
     bool side_status[4] = {0, 0, 0, 0}; // 0=上,1=右,2=下,3=左; 0=显示侧边,1=隐藏
+    bool is_hide = false;
     inline static constexpr Vector2 mv[4] =
     {
         { 0,-1},
@@ -159,6 +162,7 @@ private:
     int speedup_offset = 0;
     SnakeState* snake;
     int playerid;
+    bool is_hide = 0;
     Vector2 scale = {1, 1};//设置缩放
 public:
     Snake_Body (SnakeState* snake = nullptr, int playerid = 0) : snake(snake), playerid(playerid)
@@ -179,9 +183,15 @@ public:
         head[0].set_scale(scale);
         head[1].set_scale(scale);
     }
+    void set_hide (bool hide){is_hide = hide;}
+
     void update ()
     {
         if(snake == nullptr)return;
+        auto playerstate = Global::PlayerStatus::ALIVE;
+        if(playerid == 1)playerstate = Global::player_status1;
+        else if(playerid == 2)playerstate = Global::player_status2;
+
         switch (snake->curDir)
         {
             case Direction::UP :
@@ -254,7 +264,7 @@ public:
     }
     void draw ()
     {
-        if(snake == nullptr)return;
+        if(snake == nullptr || is_hide == true)return;
         for(auto &i : body)i.draw();
         head[0].draw();head[1].draw();
     }
