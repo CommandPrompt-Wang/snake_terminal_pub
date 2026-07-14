@@ -16,14 +16,14 @@ void MenuScene::on_inputevent(InputEvent& event) {
     if (!event.is_key_press()) return;
 
     switch (event.get_key_code()) {
-        case KEY_UP:
+        case KEY_I:
         case KEY_W:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) - 1 + OPTION_COUNT) % OPTION_COUNT);
             event.consume();
             break;
 
-        case KEY_DOWN:
+        case KEY_K:
         case KEY_S:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) + 1) % OPTION_COUNT);

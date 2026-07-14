@@ -218,11 +218,13 @@ void GameScene::on_inputevent(InputEvent& event) {
         case KEY_S: pending_dirs1_.push_back(Direction::DOWN);  break;
         case KEY_A: pending_dirs1_.push_back(Direction::LEFT);  break;
         case KEY_D: pending_dirs1_.push_back(Direction::RIGHT); break;
-        case KEY_UP:    pending_dirs2_.push_back(Direction::UP);    break;
-        case KEY_DOWN:  pending_dirs2_.push_back(Direction::DOWN);  break;
-        case KEY_LEFT:  pending_dirs2_.push_back(Direction::LEFT);  break;
-        case KEY_RIGHT: pending_dirs2_.push_back(Direction::RIGHT); break;
-        case KEY_ESCAPE:
+        case KEY_I:    pending_dirs2_.push_back(Direction::UP);    break;
+        case KEY_K:  pending_dirs2_.push_back(Direction::DOWN);  break;
+        case KEY_J:  pending_dirs2_.push_back(Direction::LEFT);  break;
+        case KEY_L: pending_dirs2_.push_back(Direction::RIGHT); break;
+        
+        // menu
+        case KEY_T:
             if (pause) {
                 finished_ = true;
                 next_scene_id_ = static_cast<int>(SceneId::MENU);
@@ -235,11 +237,14 @@ void GameScene::on_inputevent(InputEvent& event) {
         //     event.consume();
         //     break;
         // default: break;
-        case KEY_P:
+        case KEY_BACKSPACE:
+        case KEY_ESCAPE:
             pause = !pause;
             event.consume();
             break;
-        case KEY_L:
+
+        // settling the game
+        case KEY_Y:
             if (pause) {
                 finished_ = true;
                 next_scene_id_ = static_cast<int>(SceneId::DIE);
@@ -263,8 +268,8 @@ void GameScene::update(float dt) {
     consume_pending_dir();
     // speed boost
     if (game_config().allowAcceleration) {
-        int s1 = (IsKeyDown(KEY_W) || IsKeyDown(KEY_S) || IsKeyDown(KEY_A) || IsKeyDown(KEY_D)) ? 2 : 1;
-        int s2 = (IsKeyDown(KEY_UP) || IsKeyDown(KEY_DOWN) || IsKeyDown(KEY_LEFT) || IsKeyDown(KEY_RIGHT)) ? 2 : 1;
+        int s1 = IsKeyDown(KEY_LEFT_SHIFT)  ? 2 : 1;
+        int s2 = IsKeyDown(KEY_RIGHT_SHIFT) ? 2 : 1;
         p1_.curSpeed = s1;
         p2_.curSpeed = s2;
         speed1_ = s1; speed2_ = s2;
@@ -383,9 +388,9 @@ void GameScene::render() {
         int screenW = GetScreenWidth();
         int screenH = GetScreenHeight();
         DrawText("PAUSED", screenW / 2 - MeasureText("PAUSED", 40) / 2, screenH / 2 - 20, 40, GRAY);
-        DrawText("Press P to resume", screenW / 2 - MeasureText("Press P to resume", 20) / 2, screenH / 2 + 30, 20, GRAY);
-        DrawText("Press ESC to return to menu", screenW / 2 - MeasureText("Press ESC to return to menu", 20) / 2, screenH / 2 + 60, 20, GRAY);
-        DrawText("Press L to manually end the game", screenW / 2 - MeasureText("Press L to manually end the game", 20) / 2, screenH / 2 + 90, 20, GRAY);
+        DrawText("Press ESC/BACKSPACE to resume", screenW / 2 - MeasureText("Press ESC/BACKSPACE to resume", 20) / 2, screenH / 2 + 30, 20, GRAY);
+        DrawText("Press T to return to menu", screenW / 2 - MeasureText("Press T to return to menu", 20) / 2, screenH / 2 + 60, 20, GRAY);
+        DrawText("Press Y to manually end the game", screenW / 2 - MeasureText("Press Y to manually end the game", 20) / 2, screenH / 2 + 90, 20, GRAY);
     }
 
     DrawFPS(10, 70);

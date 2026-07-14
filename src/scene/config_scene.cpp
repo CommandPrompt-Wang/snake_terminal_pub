@@ -21,24 +21,24 @@ void ConfigScene::on_inputevent(InputEvent& event) {
     Config& cfg = game_config();
 
     // CTRL 键按住时调整量 ×10
-    float mult = (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) ? 10.0f : 1.0f;
+    float mult = (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) ? 10.0f : 1.0f;
 
     switch (event.get_key_code()) {
-        case KEY_UP:
+        case KEY_I:
         case KEY_W:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) - 1 + OPTION_COUNT) % OPTION_COUNT);
             event.consume();
             break;
 
-        case KEY_DOWN:
+        case KEY_K:
         case KEY_S:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) + 1) % OPTION_COUNT);
             event.consume();
             break;
 
-        case KEY_LEFT:
+        case KEY_J:
         case KEY_A:
             switch (current_option_) {
                 case Option::ALLOW_ACCELERATION:
@@ -66,7 +66,7 @@ void ConfigScene::on_inputevent(InputEvent& event) {
             event.consume();
             break;
 
-        case KEY_RIGHT:
+        case KEY_L:
         case KEY_D:
             switch (current_option_) {
                 case Option::ALLOW_ACCELERATION:
@@ -228,8 +228,8 @@ void ConfigScene::render() {
     }
 
     // === Hint at bottom ===
-    DrawText("Arrow keys to navigate / adjust    Ctrl for x10    ESC to return",
-             screenW / 2 - MeasureText("Arrow keys to navigate / adjust    Ctrl for x10    ESC to return", 18) / 2,
+    DrawText("Arrow keys to navigate / adjust    Shift for x10    ESC to return",
+             screenW / 2 - MeasureText("Arrow keys to navigate / adjust    Shift for x10    ESC to return", 18) / 2,
              screenH - 40,
              18, GRAY);
 }

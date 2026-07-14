@@ -46,9 +46,11 @@ void SceneManager::dispatch_input_events() {
     // 白名单
     static const int keys_to_check[] = {
         KEY_W, KEY_S, KEY_A, KEY_D,
-        KEY_UP, KEY_DOWN, KEY_LEFT, KEY_RIGHT,
-        KEY_SPACE, KEY_ESCAPE, KEY_SLASH, KEY_ENTER, KEY_P, KEY_C,
-        KEY_L,
+        KEY_I, KEY_K, KEY_J, KEY_L,
+        KEY_SPACE, KEY_ENTER, 
+        KEY_LEFT_SHIFT, KEY_RIGHT_SHIFT,
+        KEY_ESCAPE, KEY_BACKSPACE,
+        KEY_T, KEY_Y,
     };
 
     for (int key : keys_to_check) {
