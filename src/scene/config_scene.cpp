@@ -60,7 +60,11 @@ void ConfigScene::on_inputevent(InputEvent& event) {
                     cfg.time_match_duration = std::max(0, cfg.time_match_duration - static_cast<int>(1 * mult));
                     break;                case Option::REBORN_COSTS:
                     cfg.reborn_costs = std::max(0, cfg.reborn_costs - static_cast<int>(1 * mult));
-                    break;                case Option::BACK:
+                    break;
+                case Option::RESPAWN_IN_ADVANCE:
+                    cfg.respawnInAdvance = !cfg.respawnInAdvance;
+                    break;
+                case Option::BACK:
                     break;
             }
             event.consume();
@@ -89,6 +93,9 @@ void ConfigScene::on_inputevent(InputEvent& event) {
                     break;
                 case Option::REBORN_COSTS:
                     cfg.reborn_costs += static_cast<int>(1 * mult);
+                    break;
+                case Option::RESPAWN_IN_ADVANCE:
+                    cfg.respawnInAdvance = !cfg.respawnInAdvance;
                     break;
                 case Option::BACK:
                     break;
@@ -141,6 +148,7 @@ void ConfigScene::render() {
         "Increasing Difficulty",
         "Time Match Duration",
         "Reborn Costs",
+        "Respawn In Advance",
         "BACK",
     };
 
@@ -187,6 +195,9 @@ void ConfigScene::render() {
                 case Option::REBORN_COSTS:
                     std::snprintf(floatBuf, sizeof(floatBuf), "%d", cfg.reborn_costs);
                     valueStr = floatBuf;
+                    break;
+                case Option::RESPAWN_IN_ADVANCE:
+                    valueStr = cfg.respawnInAdvance ? "ON" : "OFF";
                     break;
                 case Option::BACK:
                     break;

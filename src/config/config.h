@@ -8,6 +8,7 @@ struct Config {
     float increasing_difficulty = 1.0f; // difficulty ramp coefficient (0 = constant speed)
     int time_match_duration = 120; // time match duration in seconds (0 = infinite, for timerace mode)
     int reborn_costs = 1;          // points deducted on death in TIMERACE mode
+    bool respawnInAdvance = false;  // respawn before pressing key and showing a shadow
 };
 
 inline Config& game_config() {
