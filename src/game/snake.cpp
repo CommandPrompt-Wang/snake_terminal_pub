@@ -1,6 +1,8 @@
 #include "game/snake.h"
 #include "global.h"
 
+#include <iostream>
+
 // -- 静态成员 --
 std::mt19937 Snake::rng_{std::random_device{}()};
 
@@ -100,8 +102,8 @@ bool Snake::tick(const Snake& other, Position& apple) {
         return false;
     }
 
-    // 碰对方（常规碰撞 + 头碰头互撞 / 同格）
-    if (!game_config().allowThroughOthers && !other.body_.empty() &&
+    // 碰对方（常规碰撞 + 头碰头互撞 / 同格），虚影不参与碰撞
+    if (!game_config().allowThroughOthers && !other.body_.empty() && other.collidable_ &&
         (check_body_collision(other.body_, head) ||
          other.next_head() == body_.front() ||
          head == other.next_head())) {
@@ -174,7 +176,41 @@ void Snake::translate(int dx, int dy) {
         seg.y += dy;
     }
 }
+// ── 虚影 ──
 
+void Snake::set_ghost(bool on) {
+    is_ghost_   = on;
+    collidable_ = !on;
+}
+
+void Snake::generate_ghost() {
+    std::uniform_int_distribution<int> dx(0, GRID_W - 1);
+    std::uniform_int_distribution<int> dy(0, GRID_H - 1);
+    Position target = {dx(rng_), dy(rng_)};
+
+    std::cerr << "[ghost] P" << playerId_ << " ghost at (" << target.x << "," << target.y
+              << ") from (" << body_[0].x << "," << body_[0].y << ")\n";
+
+    int ddx = target.x - body_[0].x;
+    int ddy = target.y - body_[0].y;
+    for (auto& seg : body_) { seg.x += ddx; seg.y += ddy; }
+
+    set_ghost(true);
+}
+
+bool Snake::deploy_from_ghost(Snake& other) {
+    std::cerr << "[ghost] P" << playerId_ << " deploy at (" << body_[0].x << "," << body_[0].y << ")\n";
+
+    set_ghost(false);
+
+    if (check_body_collision(other.body_, body_.front())) {
+        other.set_player_status(Global::PlayerStatus::ON_PLAYER);
+        other.set_animation_status(AnimationStatus::DYING);
+    }
+
+    curSpeed_ = 1;
+    return true;
+}
 // -- 苹果 / 安全位置（friend 自由函数）--
 
 Position random_apple_pos(const Snake& a, const Snake& b) {

@@ -27,7 +27,7 @@ class Draw_By_Layer
         for (auto &i : vec)
         {
             DrawTexturePro(i.first.texture,i.first.source,i.first.dest,i.first.origin,i.first.rotation,i.first.tint);
-            std::cerr << "asd;lkjfaj;lkkj;flsdaj;klfsdaafsd; i.second = " << i.second.first << " i.path = " << i.second.second <<  '\n';
+            // std::cerr << "asd;lkjfaj;lkkj;flsdaj;klfsdaafsd; i.second = " << i.second.first << " i.path = " << i.second.second <<  '\n';
         }
         vec.clear();
     }

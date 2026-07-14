@@ -74,22 +74,34 @@ void GameScene::on_inputevent(InputEvent& event) {
     if (!event.is_key_press()) return;
 
     // 尝试按键重生：WAITING 状态的蛇按下移动键时复活
-    auto handle_respawn = [&](Snake& s, const Snake& other,
+    auto handle_respawn = [&](Snake& s, const Snake& otherSnake,
                               Direction dir, std::deque<Direction>& pending) -> bool {
         if (s.get_animation_status() != Snake::AnimationStatus::WAITING)
-            return false; // 不由本 handler 处理
+            return false;
 
-        if (!s.respawn(other)) {
-            // 饿死 → 游戏结束
-            Global::end_reason = Global::GameOverReason::DEATH;
-            Global::last_score_player1 = p1_.get_score();
-            Global::last_score_player2 = p2_.get_score();
-            finished_ = true;
+        if (game_config().respawnInAdvance) {
+            // 虚影模式：部署到预生成的虚影位置（内部处理踩杀）
+            if (!s.deploy_from_ghost(const_cast<Snake&>(otherSnake))) {
+                Global::end_reason = Global::GameOverReason::DEATH;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
+                finished_ = true;
+            } else {
+                s.set_animation_status(Snake::AnimationStatus::MOVE);
+                pending.push_back(dir);
+            }
         } else {
-            s.set_animation_status(Snake::AnimationStatus::MOVE);
-            pending.push_back(dir); // 把该方向记入输入缓冲
+            if (!s.respawn(otherSnake)) {
+                Global::end_reason = Global::GameOverReason::DEATH;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
+                finished_ = true;
+            } else {
+                s.set_animation_status(Snake::AnimationStatus::MOVE);
+                pending.push_back(dir);
+            }
         }
-        return true; // 已消费
+        return true;
     };
 
     switch (event.get_key_code()) {
@@ -163,7 +175,7 @@ void GameScene::update(float dt) {
 
     time_elapsed_ += dt;
 
-    // 1. 解析 WAITING 状态（由 SnakeBody 渲染层管理 DYING -> WAITING）
+    // 1. 解析 WAITING 状态（由 Snake_Body 渲染层管理 DYING -> WAITING）
     //    - DEATHMATCH: 双蛇 WAITING → 结束（活的蛇已在 tick 后被设为 WAITING）
     //    - TIMERACE:   等待玩家按键重生，这里不做任何操作
     if (Global::last_game_mode == Global::GameMode::DEATHMATCH &&
@@ -231,19 +243,35 @@ void GameScene::update(float dt) {
 
         // 统一处理死亡
         auto apply_death = [&](Snake& s) {
-            // TIMERACE 下身体不够扣重生成本 → 立即饿死
             if (Global::last_game_mode == Global::GameMode::TIMERACE) {
                 int deduct = game_config().reborn_costs;
-                if ((int)s.get_body().size() <= deduct) {
-                    s.add_score(-deduct);
-                    // tick() 记录了碰撞死因（如 ON_WALL），但这里是饿死，覆盖
-                    if (s.get_player_id() == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
-                    else                        Global::player_status2 = Global::PlayerStatus::STARVED;
-                    Global::end_reason = Global::GameOverReason::DEATH;
-                    Global::last_score_player1 = p1_.get_score();
-                    Global::last_score_player2 = p2_.get_score();
-                    finished_ = true;
-                    return;
+
+                if (game_config().respawnInAdvance) {
+                    // 虚影模式：死时立即扣分，饿死则直接结束；否则生成虚影
+                    s.remove_from_back(deduct);
+                    s.set_score((int)s.get_body().size() - 3);
+                    if (s.get_body().empty()) {
+                        if (s.get_player_id() == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
+                        else                        Global::player_status2 = Global::PlayerStatus::STARVED;
+                        Global::end_reason = Global::GameOverReason::DEATH;
+                        Global::last_score_player1 = p1_.get_score();
+                        Global::last_score_player2 = p2_.get_score();
+                        finished_ = true;
+                        return;
+                    }
+                    s.generate_ghost();
+                } else {
+                    // 正常模式：身体不够扣 → 立即饿死
+                    if ((int)s.get_body().size() <= deduct) {
+                        s.add_score(-deduct);
+                        if (s.get_player_id() == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
+                        else                        Global::player_status2 = Global::PlayerStatus::STARVED;
+                        Global::end_reason = Global::GameOverReason::DEATH;
+                        Global::last_score_player1 = p1_.get_score();
+                        Global::last_score_player2 = p2_.get_score();
+                        finished_ = true;
+                        return;
+                    }
                 }
             }
             s.set_animation_status(Snake::AnimationStatus::DYING);

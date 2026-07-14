@@ -53,7 +53,13 @@ public:
     // -- 苹果 / 安全位置 --
     friend Position random_apple_pos(const Snake& a, const Snake& b);
     friend Position random_safe_pos(const Snake& a, const Snake& b);
+    // ── 虚影（respawnInAdvance）──
+    void    generate_ghost();                    // 随机位置 + 平移蛇体
+    void    set_ghost(bool on);                  // 切换虚影状态（同时设不可碰撞/可碰撞）
+    bool    deploy_from_ghost(Snake& other);     // 部署：恢复态势，检查踩杀
 
+    bool is_ghost()        const { return is_ghost_; }
+    bool get_collidable()  const { return collidable_; }
     enum class AnimationStatus {
         MOVE,
         // EAT,
@@ -74,6 +80,9 @@ private:
     int score_ = 0;
 
     AnimationStatus animStatus_ = AnimationStatus::MOVE;
+
+    bool is_ghost_   = false;  // 虚影态
+    bool collidable_ = true;   // 参与碰撞
 
     static std::mt19937 rng_;
 };
