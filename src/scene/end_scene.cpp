@@ -141,10 +141,6 @@ void EndScene::render() {
                      screenW / 2 - MeasureText(labels[i], optFont) / 2,
                      y + (h - optFont) / 2,
                      optFont, BLACK);
-            DrawText(">",
-                     x - 30,
-                     y + (h - optFont) / 2,
-                     optFont, Color{230, 41, 55, 255});
         } else {
             DrawText(labels[i],
                      screenW / 2 - MeasureText(labels[i], optFont) / 2,

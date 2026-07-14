@@ -29,6 +29,7 @@ add_executable(snake
     src/scene/config_scene.h
     src/game/snake.cpp
     src/utility.h
+    src/game/snake_anim.h
 )
 
 target_include_directories(snake PRIVATE ${CMAKE_SOURCE_DIR}/src)

@@ -31,9 +31,10 @@ private:
         TIME_MATCH_DURATION,
         REBORN_COSTS,
         RESPAWN_IN_ADVANCE,
+        DEATH_ANIM_INTERRUPT,
         BACK,
     };
-    static constexpr int OPTION_COUNT = 9;
+    static constexpr int OPTION_COUNT = 10;
     Option current_option_ = Option::ALLOW_ACCELERATION;
     bool finished_ = false;
     int next_scene_id_ = static_cast<int>(SceneId::MENU);

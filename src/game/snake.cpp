@@ -17,6 +17,8 @@ void Snake::init(int startX, int startY, Direction dir, int len) {
     curDir_ = dir;
     lastMoveDir_ = dir;
     curSpeed_ = 1;
+    is_ghost_ = false;
+    collidable_ = true;
     for (int i = 0; i < len; ++i) {
         if (dir == Direction::LEFT)  body_.push_back({startX + i, startY});
         if (dir == Direction::RIGHT) body_.push_back({startX - i, startY});
@@ -31,6 +33,8 @@ void Snake::reset() {
     lastMoveDir_ = Direction::DOWN;
     curSpeed_ = 1;
     score_ = 0;
+    is_ghost_ = false;
+    collidable_ = true;
 }
 
 // -- 方向工具 --
@@ -205,7 +209,6 @@ bool Snake::deploy_from_ghost(Snake& other) {
 
     if (check_body_collision(other.body_, body_.front())) {
         other.set_player_status(Global::PlayerStatus::ON_PLAYER);
-        other.set_animation_status(AnimationStatus::DYING);
     }
 
     curSpeed_ = 1;

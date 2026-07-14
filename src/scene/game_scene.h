@@ -6,6 +6,7 @@
 #include "render/draw_list.h"
 #include "render/sprite.h"
 #include "game/snake_render.h"
+#include "game/snake_anim.h"
 #include "raylib.h"
 
 #include <chrono>
@@ -55,6 +56,7 @@ private:
     using Clock = std::chrono::steady_clock;
     Clock::time_point last_tick_;
     float time_elapsed_ = 0;
+    float last_tick_sec_ = 0.3f;  // 上次 tick 间隔（秒），用于同步死亡动画速率
 
     // rendering
     Draw_List draw_list_;

@@ -14,12 +14,14 @@ public:
     virtual void on_enter() = 0;
     AnimateState(const std::string& state_name):state_name (state_name){}
     AnimateState(){}
-    ~AnimateState(){}
+    virtual ~AnimateState() = default;
+    AnimateState(AnimateState&&) = default;
+    AnimateState& operator=(AnimateState&&) = default;
 };
 class AnimateManager : public Basic_Render_Class
 {
 private:
-    std::map<std::string,AnimateState&> mp;
+    std::map<std::string, AnimateState*> mp;
 public:
     std::string current_state = "";
     AnimateManager(){}
@@ -27,28 +29,29 @@ public:
     void update()
     {
         if(current_state == "")return;
-        mp[current_state].update();
-        if(mp[current_state].next_state != "")
+        mp[current_state]->update();
+        if(mp[current_state]->next_state != "")
         {
-            switch_state(mp[current_state].next_state);
+            switch_state(mp[current_state]->next_state);
         }
     }
     void draw()
     {
         if(current_state == "")return;
-        mp[current_state].draw();
+        mp[current_state]->draw();
     }
-    void add_state(const std::string&  state_name,const AnimateState& state)
+    void add_state(const std::string&  state_name, AnimateState& state)
     {
-        mp[state_name] = state;
+        mp[state_name] = &state;
     }
     void switch_state(std::string state_name)
     {
         if(current_state == state_name || mp.find(state_name) == mp.end())return;
         if(current_state != "")
         {
-            mp[current_state].on_exit();
+            mp[current_state]->on_exit();
         }
-        mp[current_state = state_name].on_enter();
+        mp[current_state = state_name]->on_enter();
     }
+    const std::string& get_current_state() const { return current_state; }
 };

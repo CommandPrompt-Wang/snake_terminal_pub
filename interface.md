@@ -16,19 +16,23 @@ src/
 │   ├── config.h             # Config 结构体 + game_config()
 │   └── config_loader.h      # 配置加载/保存
 ├── render/                  # 渲染组件
-│   ├── draw_list.h          # Draw_List（update/draw 批量管理）
+│   ├── draw_list.h          # Draw_List（update/draw 批量管理 + Draw_By_Layer 分层绘制）
 │   ├── render.h             # Basic_Render_Class 基类
-│   └── sprite.h             # Sprite（raylib 纹理精灵）
+│   └── sprite.h             # Sprite（raylib 纹理精灵，支持 alpha 透明度）
 ├── scene/                   # 场景系统
 │   ├── scene.h              # Scene 基类 + handle_event() 分发
 │   ├── scene_manager.h/cpp  # 主循环：输入→事件→更新→渲染
 │   ├── menu_scene.h/cpp     # 菜单场景（含 DEATHMATCH / TIMERACE 选择）
-│   ├── config_scene.h/cpp   # 配置设置场景
-│   ├── game_scene.h/cpp     # 游戏主场景（蛇移动、碰撞、苹果、复活）
-│   └── end_scene.h/cpp      # 结算场景（显示胜者与游戏结束原因，至多2行）
+│   ├── config_scene.h/cpp   # 配置设置场景（10 项配置）
+│   ├── game_scene.h/cpp     # 游戏主场景（蛇移动、碰撞、苹果、复活、虚影打断）
+│   └── end_scene.h/cpp      # 结算场景（显示胜者与游戏结束原因）
 └── game/                    # 游戏逻辑
-    ├── snake.h              # SnakeState, random_apple_pos
-    └── snake_render.h       # Snake_Block / Snake_Body（蛇身精灵渲染）
+    ├── snake.h              # Snake 类（纯游戏逻辑，不感知动画）
+    ├── snake.cpp            # Snake 实现
+    ├── snake_render.h       # SnakeBlock（蛇身单节精灵） + Vector2 工具函数
+    ├── snake_anim.h         # SnakeBody（蛇身渲染体） + 动画状态机
+    └── snake_state/
+        └── animate_manager.h # AnimateState 基类 + AnimateManager（状态机）
 ```
 
 ### 单线程主循环（SceneManager::run）
@@ -128,32 +132,65 @@ namespace Global {
 
 ```cpp
 const auto &cfg = game_config();
-cfg.allowAcceleration;          // 是否加速（加速键倍速）
-cfg.toroidalSpace;              // 环面地图（穿墙）
-cfg.allowThroughOthers;         // 是否穿过对方
-cfg.speed_factor;               // 整体速度倍率（最小 0.1）
-cfg.increasing_difficulty;      // 难度递增系数（0 = 恒定速度）
-cfg.time_match_duration;        // TIMERACE 限时秒数（0 = 无穷，UI 显示 inf）
-cfg.reborn_costs;               // TIMERACE 死亡后从尾部切除的节数
+cfg.allowAcceleration;               // 是否加速（Shift 键倍速）
+cfg.toroidalSpace;                   // 环面地图（穿墙）
+cfg.allowThroughOthers;              // 是否穿过对方
+cfg.speed_factor;                    // 整体速度倍率（最小 0.1）
+cfg.increasing_difficulty;           // 难度递增系数（0 = 恒定速度）
+cfg.time_match_duration;             // TIMERACE 限时秒数（0 = 无穷，UI 显示 inf）
+cfg.reborn_costs;                    // TIMERACE 死亡后从尾部切除的节数
+cfg.respawnInAdvance;                // 虚影复活模式（死后随机位置生成半透明虚影）
+cfg.deathAnimInterruptThreshold;     // 死亡动画打断阈值（身长>此值时允许按键跳过剩余 X 标记）
 ```
+
+### 蛇-动画分离架构
+
+`Snake` 为纯游戏逻辑类，不包含任何动画状态。动画交由 `SnakeBody` 管理的状态机处理：
+
+```
+SnakeBody
+  └── AnimateManager（状态机）
+        ├── SnakeMove   → 移动 + 加速动画（拥 speedup_offset/frame_process）
+        ├── SnakeDie    → 死亡动画（逐节 X 标记，速率同步 tick）
+        └── SnakeWaiting → 等待复活（虚影绘制/冻结显示）
+```
+
+**状态转换**（由 `game_scene` 驱动）：
+
+| 转换 | 触发 | 说明 |
+|---|---|---|
+| MOVE → DIE | 蛇死亡 (`apply_death`) | 播放逐节 X 标记 |
+| DIE → WAITING | 动画完成 / 按键打断 | 虚影模式部署 ghost |
+| WAITING → MOVE | 按键复活 (`handle_respawn`) | 部署真身 |
+| MOVE → WAITING | DEATHMATCH 幸存者 | 冻结显示 |
+
+**Ghost 虚影流程**（TIMERACE + `respawnInAdvance`）：
+1. 死亡 → 播放死亡动画（原位置 X 标记）
+2. 动画完成 → `generate_ghost()`（随机位置，alpha=100 半透明）
+3. 玩家看到虚影位置，按键 → `deploy_from_ghost()` → MOVE
+
+**死亡动画打断**（TIMERACE，`body.length > deathAnimInterruptThreshold`）：
+- 前 N 节（N=阈值）X 标记正常播放
+- 阈值节播完后，按任意移动键跳过剩余 X → 直接 WAITING/虚影
 
 ### 游戏模式
 
 | 模式 | 说明 | 死亡处理 |
 |---|---|---|
-| `DEATHMATCH` | 经典模式，撞墙/撞自己/撞对方即结束 | 直接结束，分数 = 蛇身长度 - 3 |
-| `TIMERACE` | 倒计时比赛，死亡后复活继续 | 从尾部切除 `reborn_costs` 节 → 平移到安全位置；切空(score≤-3)则饿死 |
+| `DEATHMATCH` | 经典模式，撞墙/撞自己/撞对方即结束 | 死亡方播动画→消失；幸存者冻结→双 WAITING→结算 |
+| `TIMERACE` | 计时赛，死亡后复活继续 | 从尾部切除 `reborn_costs` 节；虚影模式生成半透明 ghost；切空则饿死 |
 
 ### 控制
 
 | 按键 | 作用 |
 |---|---|
-| W/A/S/D | 玩家 1 方向 |
-| ↑/←/↓/→ | 玩家 2 方向 |
-| P | 暂停/继续 |
-| L | 手动结束（暂停时） |
-| ESC | 返回菜单（暂停时） |
-| Ctrl + ←/→ | Config 中调整量 ×10 |
+| W/A/S/D | 玩家 1 方向 / 死亡动画打断 |
+| I/J/K/L | 玩家 2 方向 / 死亡动画打断 |
+| L-Shift / R-Shift | 加速（需 `allowAcceleration` 开启） |
+| ESC / Backspace | 暂停/继续 |
+| T | 暂停时返回菜单 |
+| Y | 暂停时手动结束 |
+| Shift + A/D | Config 中调整量 ×10 |
 
 ### 构建
 
@@ -162,4 +199,5 @@ cfg.reborn_costs;               // TIMERACE 死亡后从尾部切除的节数
 ./build.sh --build-raylib  # 完整构建（重新 CMake Configure，包含 raylib）
 ./build.sh --debug         # Debug 模式
 ./build.sh --debug --build-raylib  # Debug + 完整构建
+./build.sh --clean         # 清除 build/ 和 dist/
 ```

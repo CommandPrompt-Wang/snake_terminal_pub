@@ -36,6 +36,7 @@ public:
         , flip_h(other.flip_h)
         , flip_v(other.flip_v)
         , hide(other.hide)
+        , alpha(other.alpha)
         , pos(other.pos)
         , offset(other.offset)
         , scale(other.scale)
@@ -62,6 +63,7 @@ public:
         flip_h         = other.flip_h;
         flip_v         = other.flip_v;
         hide           = other.hide;
+        alpha          = other.alpha;
         pos            = other.pos;
         offset         = other.offset;
         scale          = other.scale;
@@ -97,6 +99,10 @@ public:
     {
         hide = h;
     }
+
+    // -- Alpha transparency --
+    void set_alpha(uint8_t a) { alpha = a; }
+    uint8_t get_alpha() const { return alpha; }
 
     // Actual draw position = pos + offset
     Vector2 get_offset() const
@@ -303,7 +309,7 @@ public:
             fw * scale.x,
             fh * scale.y,
         };
-        push_draw(texture, src, dest, Vector2{0, 0}, 0.0f, WHITE,layer,imagepath);
+        push_draw(texture, src, dest, Vector2{0, 0}, 0.0f, Color{255, 255, 255, alpha}, layer, imagepath);
     }
 
 private:
@@ -333,6 +339,8 @@ private:
     bool flip_v = false;  // Vertical flip
 
     bool hide = false; // Whether hidden (not rendered)
+
+    uint8_t alpha = 255;  // 透明度 (0=全透明, 255=不透明)
 
     Vector2 pos{0, 0};     // Scene coordinates
     Vector2 offset{0, 0};  // Draw offset, actual position = pos + offset

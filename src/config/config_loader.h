@@ -53,6 +53,7 @@ static bool load_config(const std::string &path) {
         if (key == "time_match_duration")       cfg.time_match_duration      = std::max(0, i);
         if (key == "reborn_costs")               cfg.reborn_costs             = std::max(0, i);
         if (key == "respawn_in_advance")          cfg.respawnInAdvance         = b;
+        if (key == "death_anim_interrupt")         cfg.deathAnimInterruptThreshold = std::max(0, i);
     }
     return true;
 }
@@ -71,4 +72,5 @@ static void save_config(const std::string &path) {
     f << "time_match_duration     = " << cfg.time_match_duration << "\n";
     f << "reborn_costs            = " << cfg.reborn_costs << "\n";
     f << "respawn_in_advance       = " << (cfg.respawnInAdvance ? "true" : "false") << "\n";
+    f << "death_anim_interrupt     = " << cfg.deathAnimInterruptThreshold << "\n";
 }

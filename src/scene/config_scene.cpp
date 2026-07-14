@@ -64,6 +64,9 @@ void ConfigScene::on_inputevent(InputEvent& event) {
                 case Option::RESPAWN_IN_ADVANCE:
                     cfg.respawnInAdvance = !cfg.respawnInAdvance;
                     break;
+                case Option::DEATH_ANIM_INTERRUPT:
+                    cfg.deathAnimInterruptThreshold = std::max(0, cfg.deathAnimInterruptThreshold - static_cast<int>(1 * mult));
+                    break;
                 case Option::BACK:
                     break;
             }
@@ -96,6 +99,9 @@ void ConfigScene::on_inputevent(InputEvent& event) {
                     break;
                 case Option::RESPAWN_IN_ADVANCE:
                     cfg.respawnInAdvance = !cfg.respawnInAdvance;
+                    break;
+                case Option::DEATH_ANIM_INTERRUPT:
+                    cfg.deathAnimInterruptThreshold += static_cast<int>(1 * mult);
                     break;
                 case Option::BACK:
                     break;
@@ -149,12 +155,13 @@ void ConfigScene::render() {
         "Time Match Duration",
         "Reborn Costs",
         "Respawn In Advance",
+        "Death Anim Interrupt",
         "BACK",
     };
 
     const int optFont = 25;
-    const int optGap  = 62;
-    const int optStartY = screenH / 3 - 30;
+    const int optGap  = 58;
+    const int optStartY = screenH / 3 - 70;
 
     for (int i = 0; i < OPTION_COUNT; ++i) {
         int y = optStartY + i * optGap;
@@ -198,6 +205,10 @@ void ConfigScene::render() {
                     break;
                 case Option::RESPAWN_IN_ADVANCE:
                     valueStr = cfg.respawnInAdvance ? "ON" : "OFF";
+                    break;
+                case Option::DEATH_ANIM_INTERRUPT:
+                    std::snprintf(floatBuf, sizeof(floatBuf), "%d", cfg.deathAnimInterruptThreshold);
+                    valueStr = floatBuf;
                     break;
                 case Option::BACK:
                     break;

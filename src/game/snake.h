@@ -60,14 +60,6 @@ public:
 
     bool is_ghost()        const { return is_ghost_; }
     bool get_collidable()  const { return collidable_; }
-    enum class AnimationStatus {
-        MOVE,
-        // EAT,
-        DYING,
-        WAITING,
-    };
-    AnimationStatus get_animation_status() const { return animStatus_; }
-    void set_animation_status(AnimationStatus status) { animStatus_ = status; }
 
 private:
     void set_player_status(Global::PlayerStatus status) const;
@@ -78,8 +70,6 @@ private:
     int curSpeed_ = 1;
     int playerId_ = 0;
     int score_ = 0;
-
-    AnimationStatus animStatus_ = AnimationStatus::MOVE;
 
     bool is_ghost_   = false;  // 虚影态
     bool collidable_ = true;   // 参与碰撞
