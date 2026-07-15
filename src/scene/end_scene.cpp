@@ -169,19 +169,21 @@ int EndScene::get_next_scene_id() const {
     return static_cast<int>(next_scene_id_);
 }
 
-const char* EndScene::status_text(Global::PlayerStatus s, int player) {
+std::string EndScene::status_text(Global::PlayerStatus s, int player) {
     const char* p = (player == 1) ? "PLAYER1" : "PLAYER2";
     switch (s) {
-        case Global::PlayerStatus::ON_WALL:   return TextFormat("%s HIT THE WALL", p);
-        case Global::PlayerStatus::ON_SELF:   return TextFormat("%s HIT ITSELF", p);
-        case Global::PlayerStatus::ON_PLAYER: return TextFormat("%s COLLIDED", p);
-        case Global::PlayerStatus::STARVED:   return TextFormat("%s STARVED", p);
+        case Global::PlayerStatus::ON_WALL:   return std::string(TextFormat("%s HIT THE WALL", p));
+        case Global::PlayerStatus::ON_SELF:   return std::string(TextFormat("%s HIT ITSELF", p));
+        case Global::PlayerStatus::ON_PLAYER: return std::string(TextFormat("%s COLLIDED", p));
+        case Global::PlayerStatus::STARVED:   return std::string(TextFormat("%s STARVED", p));
         default: return "";
     }
 }
 
 std::string EndScene::build_die_reason() {
     // 全局原因优先
+    if (Global::end_reason == Global::GameOverReason::FULL_BOARD)
+        return "You've filled everywhere!!!";
     if (Global::end_reason == Global::GameOverReason::TIMEOUT)
         return "TIME LIMIT REACHED";
     if (Global::end_reason == Global::GameOverReason::MANUAL)

@@ -266,9 +266,10 @@ inline void SnakeMove::update() {
             break;
     }
     snakebody->head[0].update(); snakebody->head[1].update();
-    bool is_speedup = (snakebody->playerid == 1)
-        ? IsKeyDown(KEY_LEFT_SHIFT)
-        : IsKeyDown(KEY_RIGHT_SHIFT);
+    bool is_speedup = game_config().allowAcceleration && (
+        (snakebody->playerid == 1)
+            ? IsKeyDown(KEY_LEFT_SHIFT)
+            : IsKeyDown(KEY_RIGHT_SHIFT));
     if (is_speedup) {
         frame_process += GetFrameTime();
         while (frame_process > speedup_duration) {
@@ -319,6 +320,13 @@ inline void SnakeDie::on_enter() {
 }
 
 inline void SnakeDie::update() {
+    // 防御：如果 die_block 异常膨胀（超过蛇身长度+dying_length），重置
+    if (die_block.size() > snakebody->body.size() + dying_length) {
+        die_block.clear();
+        dying_offset = 0;
+        pause = false;
+        dying_process = 0;
+    }
     if (pause) {
         // 所有 X 已生成，等待最后一节展示完整的 dying_duration 后切换
         dying_process += GetFrameTime();
@@ -360,7 +368,7 @@ inline void SnakeWaiting::draw() {
 }
 
 inline bool SnakeDie::can_interrupt() const {
-    return !pause && interrupt_threshold > 0
+    return !pause && interrupt_threshold >= 0
         && dying_offset >= interrupt_threshold
         && dying_offset < (int)snakebody->body.size();
 }

@@ -14,7 +14,8 @@ class Sprite : public BasicRenderClass
 {
 public:
     // Load Image from file;
-    explicit Sprite(const std::string& path,int layer):imagepath(path),layer(layer){}
+    explicit Sprite(const std::string& path,int layer)
+        : imagepath(path), image{}, texture{}, texture_frame(-1), layer(layer){}
 
     ~Sprite()
     {
@@ -309,7 +310,7 @@ public:
             fw * scale.x,
             fh * scale.y,
         };
-        push_draw(texture, src, dest, Vector2{0, 0}, 0.0f, Color{255, 255, 255, alpha}, layer, imagepath);
+        DrawLayer::push(texture, src, dest, Vector2{0, 0}, 0.0f, Color{255, 255, 255, alpha}, layer, imagepath);
     }
 
 private:
@@ -352,6 +353,7 @@ private:
         image = LoadImage(imagepath.c_str());
         if (image.data == nullptr || hframes < 1 || vframes < 1)
         {
+            UnloadImage(image);
             return;
         }
         if (texture.id != 0)
@@ -371,8 +373,6 @@ private:
         int col = frame % hframes;
         int row = frame / hframes;
         Rectangle crop{col * fw, row * fh, fw, fh};
-
-        // std::cout << "[DEBUG] crop = {" << crop.x << ", " << crop.y << ", " << crop.width << ", " << crop.height << "}" << std::endl;
 
         Image frame_img = ImageFromImage(image, crop);
         texture = LoadTextureFromImage(frame_img);

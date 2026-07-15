@@ -76,7 +76,7 @@ public:
         return true;
     }
 
-    void add_player(const std::string& name, AudioStreamPlayer& p) {
+    void add_player(const std::string& name, AudioStreamPlayer p) {
         mp[name] = std::move(p);
     }
 

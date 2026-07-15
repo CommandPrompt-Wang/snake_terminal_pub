@@ -121,22 +121,25 @@ check_collide(const Snake& s1, const Snake& s2, const Position& apple,
     if (r1 != A || r2 != A) return {r1, r2};
 
     if (!game_config().allowThroughOthers && s1.collidable_ && s2.collidable_) {
-        // 吃苹果导致尾巴不动的情况，仍然要判定碰撞
-        auto after = [&](const Snake& s, Position h) {
-            std::deque<Position> b = s.body_;
-            b.push_front(h);
-            if (h != apple) b.pop_back();
-            return b;
-        };
-        auto b1 = after(s1, tick1 ? h1 : s1.body_.front());
-        auto b2 = after(s2, tick2 ? h2 : s2.body_.front());
-        auto in = [](const std::deque<Position>& b, Position h, int skip) {
-            for (size_t i = skip; i < b.size(); ++i)
-                if (b[i] == h) return true;
+        // 使用原 deque 引用进行分段检查，避免每帧深拷贝
+        // 判断 h1 是否撞入 s2 的"模拟后身体"（排除 s2 的旧头部 index=0）
+        auto hits = [&](const std::deque<Position>& targetBody, Position myHead,
+                        Position otherNewHead, bool otherEatsApple, bool otherTicking) {
+            if (!otherTicking) {
+                // 对方不动：检测完整当前身体（含头部 index=0 和尾部）
+                for (size_t i = 0; i < targetBody.size(); ++i)
+                    if (targetBody[i] == myHead) return true;
+                return false;
+            }
+            // 对方移动：模拟 push_front(otherNewHead)，若未吃苹果则 pop_back
+            size_t end = otherEatsApple ? targetBody.size() : targetBody.size() - 1;
+            for (size_t i = 1; i < end; ++i)
+                if (targetBody[i] == myHead) return true;
+            if (myHead == otherNewHead) return true;
             return false;
         };
-        bool hit12 = tick1 && in(b2, h1, 1);
-        bool hit21 = tick2 && in(b1, h2, 1);
+        bool hit12 = tick1 && hits(s2.body_, h1, h2, h2 == apple, tick2);
+        bool hit21 = tick2 && hits(s1.body_, h2, h1, h1 == apple, tick1);
         if (hit12) r1 = S::ON_PLAYER;
         if (hit21) r2 = S::ON_PLAYER;
     }
@@ -144,7 +147,7 @@ check_collide(const Snake& s1, const Snake& s2, const Position& apple,
     return {r1, r2};
 }
 
-bool Snake::tick(const Snake& other, Position& apple) {
+Global::PlayerStatus Snake::tick(const Snake& other, Position& apple) {
     Position head = next_head();
 
     // 环形卷绕
@@ -163,14 +166,15 @@ bool Snake::tick(const Snake& other, Position& apple) {
         Global::audio_manager.play_sfx("eat");
         apple = random_apple_pos(*this, other);
         if (apple.x < 0) {
+            Global::end_reason = Global::GameOverReason::FULL_BOARD;
             set_player_status(Global::PlayerStatus::STARVED);
-            return false;
+            return Global::PlayerStatus::STARVED;
         }
     } else {
         body_.pop_back();
     }
 
-    return true;
+    return Global::PlayerStatus::ALIVE;
 }
 
 bool Snake::respawn(const Snake& other) {

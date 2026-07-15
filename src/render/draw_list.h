@@ -9,35 +9,38 @@
 #include <algorithm>
 
 
-class Draw_By_Layer
-{
-    public:
-    struct data
-    {
+// 图层绘制单例：收集每帧绘制命令，按 layer 排序后批量 DrawTexturePro
+class DrawLayer {
+public:
+    struct Item {
         Texture2D texture; Rectangle source; Rectangle dest; Vector2 origin; float rotation; Color tint;
     };
-    std::vector<std::pair<data,std::pair<int,std::string> > > vec;
-    void push_draw(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint, int layer,std::string imagepath = "")
-    {
-        vec.emplace_back(data{texture,source,dest,origin,rotation,tint},std::make_pair(layer,imagepath));
-    }
-    void draw()
-    {
-        std::sort(vec.begin(),vec.end(),[](auto& a,auto& b){return a.second.first < b.second.first;});
-        for (auto &i : vec)
-        {
-            DrawTexturePro(i.first.texture,i.first.source,i.first.dest,i.first.origin,i.first.rotation,i.first.tint);
-            // std::cerr << "asd;lkjfaj;lkkj;flsdaj;klfsdaafsd; i.second = " << i.second.first << " i.path = " << i.second.second <<  '\n';
-        }
-        vec.clear();
-    }
-};
 
-inline Draw_By_Layer draw_layer;
-inline void push_draw(Texture2D texture, Rectangle source, Rectangle dest, Vector2 origin, float rotation, Color tint, int layer, std::string imagepath = "")
-{
-    draw_layer.push_draw(texture, source, dest, origin, rotation, tint, layer, imagepath);
-}
+    static void push(Texture2D texture, Rectangle source, Rectangle dest,
+                     Vector2 origin, float rotation, Color tint, int layer,
+                     std::string imagepath = "") {
+        auto& self = instance();
+        self.vec.emplace_back(Item{texture, source, dest, origin, rotation, tint},
+                              std::make_pair(layer, imagepath));
+    }
+
+    static void flush() {
+        auto& self = instance();
+        std::sort(self.vec.begin(), self.vec.end(),
+                  [](auto& a, auto& b) { return a.second.first < b.second.first; });
+        for (auto& i : self.vec)
+            DrawTexturePro(i.first.texture, i.first.source, i.first.dest,
+                           i.first.origin, i.first.rotation, i.first.tint);
+        self.vec.clear();
+    }
+
+private:
+    static DrawLayer& instance() {
+        static DrawLayer layer;
+        return layer;
+    }
+    std::vector<std::pair<Item, std::pair<int, std::string>>> vec;
+};
 
 class Draw_List
 {
@@ -47,14 +50,14 @@ public:
         BasicRenderClass* item = nullptr;
         bool deleted = false;
     };
-    using DrawIter = std::list<DrawEntry>::iterator;
+    using iterator = std::list<DrawEntry>::iterator;
     void update()
     {
-        for (DrawIter it = g_draw_list.begin(); it != g_draw_list.end(); )
+        for (auto it = draw_entries_.begin(); it != draw_entries_.end(); )
         {
             if (it->deleted)
             {
-                it = g_draw_list.erase(it);
+                it = draw_entries_.erase(it);
                 continue;
             }
             if (it->item != nullptr)
@@ -67,25 +70,25 @@ public:
     }
     void push_back (BasicRenderClass* item)
     {
-        g_draw_list.push_back(DrawEntry{item, false});
+        draw_entries_.push_back(DrawEntry{item, false});
     }
-    void erase (DrawIter it)
+    void erase (iterator it)
     {
-        if(it == g_draw_list.end())return;
+        if(it == draw_entries_.end())return;
         it->deleted = true;
     }
     void clear ()
     {
-        g_draw_list.clear();
+        draw_entries_.clear();
     }
     void draw()
     {
 
-        for (DrawIter it = g_draw_list.begin(); it != g_draw_list.end(); )
+        for (auto it = draw_entries_.begin(); it != draw_entries_.end(); )
         {
             if (it->deleted)
             {
-                it = g_draw_list.erase(it);
+                it = draw_entries_.erase(it);
                 continue;
             }
             if (it->item != nullptr)
@@ -94,7 +97,7 @@ public:
             }
             ++it;
         }
-        draw_layer.draw();
+        DrawLayer::flush();
     }
     struct texturearg
     {
@@ -105,5 +108,5 @@ public:
         Color tint;
     };
 private:
-    std::list<DrawEntry> g_draw_list;
+    std::list<DrawEntry> draw_entries_;
 };

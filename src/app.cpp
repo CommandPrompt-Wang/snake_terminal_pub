@@ -31,16 +31,16 @@ int main() {
         return 1;
     }
 
-    Global::audio_manager.add_player("bgm", snd_bgm);
-    Global::audio_manager.add_player("die", snd_die);
-    Global::audio_manager.add_player("eat", snd_eat);
-    Global::audio_manager.add_player("gameover.death", snd_gameover_death);
-    Global::audio_manager.add_player("gameover.nondeath", snd_gameover_nondeath);
-    Global::audio_manager.add_player("ui.index_switch", snd_index_switch);
-    Global::audio_manager.add_player("ui.toggle", snd_toggle);
-    Global::audio_manager.add_player("ui.value_assign", snd_value_assign);
-    Global::audio_manager.add_player("ui.enter", snd_enter);
-    Global::audio_manager.add_player("ui.back", snd_back);
+    Global::audio_manager.add_player("bgm", std::move(snd_bgm));
+    Global::audio_manager.add_player("die", std::move(snd_die));
+    Global::audio_manager.add_player("eat", std::move(snd_eat));
+    Global::audio_manager.add_player("gameover.death", std::move(snd_gameover_death));
+    Global::audio_manager.add_player("gameover.nondeath", std::move(snd_gameover_nondeath));
+    Global::audio_manager.add_player("ui.index_switch", std::move(snd_index_switch));
+    Global::audio_manager.add_player("ui.toggle", std::move(snd_toggle));
+    Global::audio_manager.add_player("ui.value_assign", std::move(snd_value_assign));
+    Global::audio_manager.add_player("ui.enter", std::move(snd_enter));
+    Global::audio_manager.add_player("ui.back", std::move(snd_back));
 
     Global::audio_manager.set_volume_all(game_config().volume);
 

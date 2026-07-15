@@ -43,5 +43,5 @@ private:
     std::string die_reason_ = "";
 
     std::string build_die_reason();
-    static const char* status_text(Global::PlayerStatus s, int player);
+    static std::string status_text(Global::PlayerStatus s, int player);
 };

@@ -46,7 +46,7 @@ public:
     void pop_tail();
 
     // -- 高层操作 --
-    bool tick(const Snake& other, Position& apple);
+    Global::PlayerStatus tick(const Snake& other, Position& apple);
     bool respawn(const Snake& other);
     void remove_from_back(int count);
     void translate(int dx, int dy);

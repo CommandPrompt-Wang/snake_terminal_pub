@@ -33,13 +33,14 @@ inline bool is_toroidal_neighbor(const Vector2& center, const Vector2& candidate
 
 class SnakeBlock : public BasicRenderClass
 {
+    static std::string img(const char* name) { return std::string("resources/img/") + name + ".png"; }
 public:
     SnakeBlock (int playerid = 0, Vector2 pos = {0,0})
     :
     playerid(playerid), pos(pos),
-    side{Sprite("resources/img/up_side.png",2),Sprite("resources/img/right_side.png",2),Sprite("resources/img/up_side.png",2),Sprite("resources/img/right_side.png",2)},
-    speedup{Sprite("resources/img/up_speed_side.png",3),Sprite("resources/img/right_speed_side.png",3),Sprite("resources/img/up_speed_side.png",3),Sprite("resources/img/right_speed_side.png",3)},
-    fill(Sprite("resources/img/player" + std::to_string(playerid) + "fill.png",1)) {
+    side{Sprite(img("up_side"),2),Sprite(img("right_side"),2),Sprite(img("up_side"),2),Sprite(img("right_side"),2)},
+    speedup{Sprite(img("up_speed_side"),3),Sprite(img("right_speed_side"),3),Sprite(img("up_speed_side"),3),Sprite(img("right_speed_side"),3)},
+    fill(Sprite(img(("player" + std::to_string(playerid) + "fill").c_str()),1)) {
         side[2].set_flip_v(1);speedup[2].set_flip_v(1);
         side[3].set_flip_h(1);speedup[3].set_flip_h(1);
     }

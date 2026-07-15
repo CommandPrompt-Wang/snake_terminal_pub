@@ -10,7 +10,7 @@ struct Config {
     int time_match_duration = 120; // time match duration in seconds (0 = infinite, for timerace mode)
     int reborn_costs = 1;          // points deducted on death in TIMERACE mode
     bool respawnInAdvance = false;  // respawn before pressing key and showing a shadow
-    int deathAnimInterruptThreshold = 3;  // 死亡动画可打断阈值（身长>此值时允许跳过剩余动画）
+    int deathAnimInterruptThreshold = 3;  // -1 = off, 0+ = animated segments threshold to allow skip
 };
 
 inline Config& game_config() {

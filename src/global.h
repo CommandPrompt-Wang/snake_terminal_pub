@@ -24,9 +24,10 @@ namespace Global {
     // 全局结束原因（非玩家死亡导致的结束）
     enum class GameOverReason {
         NONE = 0,
-        DEATH,    // 玩家死亡导致的结束
+        DEATH,      // 玩家死亡导致的结束
         TIMEOUT,
         MANUAL,
+        FULL_BOARD, // 棋盘被占满，无法生成苹果
     };
     inline GameOverReason end_reason = GameOverReason::NONE;
 

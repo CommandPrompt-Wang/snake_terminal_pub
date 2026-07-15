@@ -61,8 +61,10 @@ private:
 
     // rendering
     Draw_List draw_list_;
-    SnakeBody snake_body_1_{nullptr, 0};
-    SnakeBody snake_body_2_{nullptr, 0};
+    // SnakeBody snake_body_1_{nullptr, 0};  // 原默认构造（playerid=0 会加载不存在的 player0fill.png）
+    // SnakeBody snake_body_2_{nullptr, 0};
+    std::unique_ptr<SnakeBody> snake_body_1_;
+    std::unique_ptr<SnakeBody> snake_body_2_;
 
     // cell size for rendering
     static constexpr int CELL_SIZE = 32;

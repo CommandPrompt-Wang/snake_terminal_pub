@@ -19,10 +19,13 @@ public:
     AnimateState(AnimateState&&) = default;
     AnimateState& operator=(AnimateState&&) = default;
 };
+// AnimateManager：管理 AnimateState 状态机。
+// 内部存储非拥有（non-owning）裸指针，指向外部对象成员。
+// 若外部对象被移动（如 SnakeBody move），调用方必须重新 add_state() 注册新地址。
 class AnimateManager : public BasicRenderClass
 {
 private:
-    std::map<std::string, AnimateState*> mp;
+    std::map<std::string, AnimateState*> mp;  // non-owning pointers
 public:
     std::string current_state = "";
     AnimateManager(){}

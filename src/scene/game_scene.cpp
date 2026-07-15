@@ -41,6 +41,8 @@ void GameScene::on_enter() {
     Global::player_status1 = Global::PlayerStatus::ALIVE;
     Global::player_status2 = Global::PlayerStatus::ALIVE;
     Global::end_reason = Global::GameOverReason::NONE;
+    Global::last_score_player1 = 0;
+    Global::last_score_player2 = 0;
 
     p1_.init(5, 5, Direction::DOWN, 3);
     p2_.init(GRID_W - 6, GRID_H - 6, Direction::UP, 3);
@@ -54,20 +56,48 @@ void GameScene::on_enter() {
     tick_remain1_ = 0;
     tick_remain2_ = 0;
 
-    snake_body_1_ = SnakeBody(&p1_, 1);
-    snake_body_1_.set_scale({2.0,2.0});
-    snake_body_1_.on_die_finished = [&]() {
-        if (game_config().respawnInAdvance && Global::last_game_mode == Global::GameMode::TIMERACE)
+    snake_body_1_ = std::make_unique<SnakeBody>(&p1_, 1);
+    snake_body_1_->set_scale({2.0,2.0});
+    snake_body_1_->on_die_finished = [&]() {
+        if (game_config().respawnInAdvance && Global::last_game_mode == Global::GameMode::TIMERACE) {
+            int deduct = game_config().reborn_costs;
+            p1_.remove_from_back(deduct);
+            if (p1_.get_body().empty()) {
+                p1_.add_score(-deduct);
+                p1_.set_player_status(Global::PlayerStatus::STARVED);
+                if (Global::end_reason == Global::GameOverReason::NONE)
+                    Global::end_reason = Global::GameOverReason::DEATH;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
+                finished_ = true;
+                return;
+            }
+            p1_.set_score((int)p1_.get_body().size() - 3);
             p1_.generate_ghost();
+        }
     };
-    draw_list_.push_back(&snake_body_1_);
-    snake_body_2_ = SnakeBody(&p2_, 2);
-    snake_body_2_.set_scale({2.0,2.0});
-    snake_body_2_.on_die_finished = [&]() {
-        if (game_config().respawnInAdvance && Global::last_game_mode == Global::GameMode::TIMERACE)
+    draw_list_.push_back(snake_body_1_.get());
+    snake_body_2_ = std::make_unique<SnakeBody>(&p2_, 2);
+    snake_body_2_->set_scale({2.0,2.0});
+    snake_body_2_->on_die_finished = [&]() {
+        if (game_config().respawnInAdvance && Global::last_game_mode == Global::GameMode::TIMERACE) {
+            int deduct = game_config().reborn_costs;
+            p2_.remove_from_back(deduct);
+            if (p2_.get_body().empty()) {
+                p2_.add_score(-deduct);
+                p2_.set_player_status(Global::PlayerStatus::STARVED);
+                if (Global::end_reason == Global::GameOverReason::NONE)
+                    Global::end_reason = Global::GameOverReason::DEATH;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
+                finished_ = true;
+                return;
+            }
+            p2_.set_score((int)p2_.get_body().size() - 3);
             p2_.generate_ghost();
+        }
     };
-    draw_list_.push_back(&snake_body_2_);
+    draw_list_.push_back(snake_body_2_.get());
 
     Global::audio_manager.play_sound("bgm");
 }
@@ -76,8 +106,8 @@ void GameScene::on_exit() {
     // 停止 BGM
     Global::audio_manager.stop_sound();
 
-    snake_body_1_.print_pos();
-    snake_body_2_.print_pos();
+    // snake_body_1_->print_pos();  // DEBUG: 蛇身坐标调试
+    // snake_body_2_->print_pos();
     draw_list_.clear();
 }
 
@@ -87,26 +117,25 @@ void GameScene::on_inputevent(InputEvent& event) {
     if (!event.is_key_press()) return;
 
     // 尝试按键重生：WAITING 状态的蛇按下移动键时复活
-    auto handle_respawn = [&](Snake& s, const Snake& otherSnake,
+    auto handle_respawn = [&](Snake& s, Snake& otherSnake,
                               Direction dir, std::deque<Direction>& pending,
                               SnakeBody& body, SnakeBody& otherBody) -> bool {
         if (!body.is_waiting()) return false;
         if (Global::last_game_mode != Global::GameMode::TIMERACE) return false;
 
         if (game_config().respawnInAdvance) {
-            // 虚影模式：部署到预生成的虚影位置（内部处理踩杀）
-            // 保存对方部署前的状态，部署后对比判断是否被踩杀
+            // 虚影模式：扣分已在 generate_ghost 时完成，直接部署到虚影位置（内部处理踩杀）
             auto prev_status = (otherSnake.get_player_id() == 1)
                 ? Global::player_status1 : Global::player_status2;
-            if (!s.deploy_from_ghost(const_cast<Snake&>(otherSnake))) {
-                Global::end_reason = Global::GameOverReason::DEATH;
+            if (!s.deploy_from_ghost(otherSnake)) {
+                if (Global::end_reason == Global::GameOverReason::NONE)
+                    Global::end_reason = Global::GameOverReason::DEATH;
                 Global::last_score_player1 = p1_.get_score();
                 Global::last_score_player2 = p2_.get_score();
                 finished_ = true;
             } else {
                 body.switch_to_move();
                 pending.push_back(dir);
-                // deploy_from_ghost 可能踩杀了对方蛇 → 通过状态变化检测（而非读取可能残留的旧值）
                 auto cur_status = (otherSnake.get_player_id() == 1)
                     ? Global::player_status1 : Global::player_status2;
                 if (prev_status != Global::PlayerStatus::ON_PLAYER &&
@@ -117,30 +146,51 @@ void GameScene::on_inputevent(InputEvent& event) {
                 }
             }
         } else {
-            if (!s.respawn(otherSnake)) {
-                Global::end_reason = Global::GameOverReason::DEATH;
+            // 非虚影模式：在此统一扣分 + 找安全位置复活
+            int deduct = game_config().reborn_costs;
+            s.remove_from_back(deduct);
+            s.set_score((int)s.get_body().size() - 3);
+            if (s.get_body().empty()) {
+                s.set_player_status(Global::PlayerStatus::STARVED);
+                if (Global::end_reason == Global::GameOverReason::NONE)
+                    Global::end_reason = Global::GameOverReason::DEATH;
                 Global::last_score_player1 = p1_.get_score();
                 Global::last_score_player2 = p2_.get_score();
                 finished_ = true;
-            } else {
-                body.switch_to_move();
-                pending.push_back(dir);
+                return true;
             }
+            Position pos = random_safe_pos(s, otherSnake);
+            if (pos.x < 0 || pos.y < 0) {
+                s.set_player_status(Global::PlayerStatus::STARVED);
+                if (Global::end_reason == Global::GameOverReason::NONE)
+                    Global::end_reason = Global::GameOverReason::DEATH;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
+                finished_ = true;
+                return true;
+            }
+            int dx = pos.x - s.get_body()[0].x;
+            int dy = pos.y - s.get_body()[0].y;
+            s.translate(dx, dy);
+            s.set_player_status(Global::PlayerStatus::ALIVE);
+            s.set_speed(1);
+            body.switch_to_move();
+            pending.push_back(dir);
         }
         return true;
     };
 
     // 计时赛死亡动画打断辅助
     auto try_interrupt_p1 = [&]() -> bool {
-        if (Global::last_game_mode == Global::GameMode::TIMERACE && snake_body_1_.can_interrupt_dying()) {
-            snake_body_1_.interrupt_dying();
+        if (Global::last_game_mode == Global::GameMode::TIMERACE && snake_body_1_->can_interrupt_dying()) {
+            snake_body_1_->interrupt_dying();
             return true;
         }
         return false;
     };
     auto try_interrupt_p2 = [&]() -> bool {
-        if (Global::last_game_mode == Global::GameMode::TIMERACE && snake_body_2_.can_interrupt_dying()) {
-            snake_body_2_.interrupt_dying();
+        if (Global::last_game_mode == Global::GameMode::TIMERACE && snake_body_2_->can_interrupt_dying()) {
+            snake_body_2_->interrupt_dying();
             return true;
         }
         return false;
@@ -150,43 +200,43 @@ void GameScene::on_inputevent(InputEvent& event) {
         // -- P1 移动键（WASD）--
         case KEY_W:
             if (try_interrupt_p1()) break;
-            if (handle_respawn(p1_, p2_, Direction::UP, pending_dirs1_, snake_body_1_, snake_body_2_)) break;
+            if (handle_respawn(p1_, p2_, Direction::UP, pending_dirs1_, *snake_body_1_, *snake_body_2_)) break;
             pending_dirs1_.push_back(Direction::UP);
             break;
         case KEY_S:
             if (try_interrupt_p1()) break;
-            if (handle_respawn(p1_, p2_, Direction::DOWN, pending_dirs1_, snake_body_1_, snake_body_2_)) break;
+            if (handle_respawn(p1_, p2_, Direction::DOWN, pending_dirs1_, *snake_body_1_, *snake_body_2_)) break;
             pending_dirs1_.push_back(Direction::DOWN);
             break;
         case KEY_A:
             if (try_interrupt_p1()) break;
-            if (handle_respawn(p1_, p2_, Direction::LEFT, pending_dirs1_, snake_body_1_, snake_body_2_)) break;
+            if (handle_respawn(p1_, p2_, Direction::LEFT, pending_dirs1_, *snake_body_1_, *snake_body_2_)) break;
             pending_dirs1_.push_back(Direction::LEFT);
             break;
         case KEY_D:
             if (try_interrupt_p1()) break;
-            if (handle_respawn(p1_, p2_, Direction::RIGHT, pending_dirs1_, snake_body_1_, snake_body_2_)) break;
+            if (handle_respawn(p1_, p2_, Direction::RIGHT, pending_dirs1_, *snake_body_1_, *snake_body_2_)) break;
             pending_dirs1_.push_back(Direction::RIGHT);
             break;
         // -- P2 移动键（IJKL）--
         case KEY_I:
             if (try_interrupt_p2()) break;
-            if (handle_respawn(p2_, p1_, Direction::UP, pending_dirs2_, snake_body_2_, snake_body_1_)) break;
+            if (handle_respawn(p2_, p1_, Direction::UP, pending_dirs2_, *snake_body_2_, *snake_body_1_)) break;
             pending_dirs2_.push_back(Direction::UP);
             break;
         case KEY_K:
             if (try_interrupt_p2()) break;
-            if (handle_respawn(p2_, p1_, Direction::DOWN, pending_dirs2_, snake_body_2_, snake_body_1_)) break;
+            if (handle_respawn(p2_, p1_, Direction::DOWN, pending_dirs2_, *snake_body_2_, *snake_body_1_)) break;
             pending_dirs2_.push_back(Direction::DOWN);
             break;
         case KEY_J:
             if (try_interrupt_p2()) break;
-            if (handle_respawn(p2_, p1_, Direction::LEFT, pending_dirs2_, snake_body_2_, snake_body_1_)) break;
+            if (handle_respawn(p2_, p1_, Direction::LEFT, pending_dirs2_, *snake_body_2_, *snake_body_1_)) break;
             pending_dirs2_.push_back(Direction::LEFT);
             break;
         case KEY_L:
             if (try_interrupt_p2()) break;
-            if (handle_respawn(p2_, p1_, Direction::RIGHT, pending_dirs2_, snake_body_2_, snake_body_1_)) break;
+            if (handle_respawn(p2_, p1_, Direction::RIGHT, pending_dirs2_, *snake_body_2_, *snake_body_1_)) break;
             pending_dirs2_.push_back(Direction::RIGHT);
             break;
         
@@ -213,6 +263,8 @@ void GameScene::on_inputevent(InputEvent& event) {
                 Global::end_reason = Global::GameOverReason::MANUAL;
                 Global::player_status1 = Global::PlayerStatus::ALIVE;
                 Global::player_status2 = Global::PlayerStatus::ALIVE;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
                 event.consume();
             }
     }
@@ -244,9 +296,10 @@ void GameScene::update(float dt) {
     //    - DEATHMATCH: 双蛇 WAITING → 结束（活的蛇已在 tick 后被设为 WAITING）
     //    - TIMERACE:   等待玩家按键重生，这里不做任何操作
     if (Global::last_game_mode == Global::GameMode::DEATHMATCH &&
-        snake_body_1_.is_waiting() &&
-        snake_body_2_.is_waiting()) {
-        Global::end_reason = Global::GameOverReason::DEATH;
+        snake_body_1_->is_waiting() &&
+        snake_body_2_->is_waiting()) {
+        if (Global::end_reason == Global::GameOverReason::NONE)
+            Global::end_reason = Global::GameOverReason::DEATH;
         Global::last_score_player1 = p1_.get_score();
         Global::last_score_player2 = p2_.get_score();
         finished_ = true;
@@ -278,17 +331,17 @@ void GameScene::update(float dt) {
     };
 
     // 非 MOVE 状态重置计时器，避免积压；同时预充完整间隔，切回时不突跳
-    if (snake_body_1_.is_moving()) tick_remain1_ -= dt;
+    if (snake_body_1_->is_moving()) tick_remain1_ -= dt;
     else tick_remain1_ = calc_tick_ms(std::max(0, (int)p1_.get_body().size() - 3), 1);
-    if (snake_body_2_.is_moving()) tick_remain2_ -= dt;
+    if (snake_body_2_->is_moving()) tick_remain2_ -= dt;
     else tick_remain2_ = calc_tick_ms(std::max(0, (int)p2_.get_body().size() - 3), 2);
 
     bool died1 = false, died2 = false;
     using S = Global::PlayerStatus;
 
     while (tick_remain1_ <= 0 || tick_remain2_ <= 0) {
-        bool t1 = tick_remain1_ <= 0 && snake_body_1_.is_moving();
-        bool t2 = tick_remain2_ <= 0 && snake_body_2_.is_moving();
+        bool t1 = tick_remain1_ <= 0 && snake_body_1_->is_moving();
+        bool t2 = tick_remain2_ <= 0 && snake_body_2_->is_moving();
 
         int sc1 = std::max(0, (int)p1_.get_body().size() - 3);
         int sc2 = std::max(0, (int)p2_.get_body().size() - 3);
@@ -299,67 +352,46 @@ void GameScene::update(float dt) {
             auto [r1, r2] = check_collide(p1_, p2_, apple_, t1, t2);
             if (r1 != S::ALIVE) { died1 = true; p1_.set_player_status(r1); }
             if (r2 != S::ALIVE) { died2 = true; p2_.set_player_status(r2); }
-            if (r1 == S::ALIVE && t1) { p1_.tick(p2_, apple_); tick_remain1_ += iv1; }
-            if (r2 == S::ALIVE && t2) { p2_.tick(p1_, apple_); tick_remain2_ += iv2; }
+            if (r1 == S::ALIVE && t1) {
+                auto tr1 = p1_.tick(p2_, apple_); tick_remain1_ += iv1;
+                if (tr1 != S::ALIVE) { died1 = true; /* status already set in tick() */ }
+            }
+            if (r2 == S::ALIVE && t2) {
+                auto tr2 = p2_.tick(p1_, apple_); tick_remain2_ += iv2;
+                if (tr2 != S::ALIVE) { died2 = true; }
+            }
         } else {
             tick_remain1_ = tick_remain2_ = 0;
             break;
         }
-        if (died1 || died2) break;
+        if (died1 || died2) {
+            last_tick_sec_ = std::min(iv1, iv2);
+            break;
+        }
         last_tick_sec_ = std::min(iv1, iv2);
     }
 
         // 统一处理死亡
         auto apply_death = [&](Snake& s, SnakeBody& body) {
-            if (Global::last_game_mode == Global::GameMode::TIMERACE) {
-                int deduct = game_config().reborn_costs;
-
-                if (game_config().respawnInAdvance) {
-                    // 虚影模式：死时立即扣分，饿死则直接结束
-                    // generate_ghost 由 on_die_finished 回调在死亡动画后触发
-                    s.remove_from_back(deduct);
-                    s.set_score((int)s.get_body().size() - 3);
-                    if (s.get_body().empty()) {
-                        if (s.get_player_id() == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
-                        else                        Global::player_status2 = Global::PlayerStatus::STARVED;
-                        Global::end_reason = Global::GameOverReason::DEATH;
-                        Global::last_score_player1 = p1_.get_score();
-                        Global::last_score_player2 = p2_.get_score();
-                        finished_ = true;
-                        return;
-                    }
-                } else {
-                    // 正常模式：身体不够扣 → 立即饿死
-                    if ((int)s.get_body().size() <= deduct) {
-                        s.add_score(-deduct);
-                        if (s.get_player_id() == 1) Global::player_status1 = Global::PlayerStatus::STARVED;
-                        else                        Global::player_status2 = Global::PlayerStatus::STARVED;
-                        Global::end_reason = Global::GameOverReason::DEATH;
-                        Global::last_score_player1 = p1_.get_score();
-                        Global::last_score_player2 = p2_.get_score();
-                        finished_ = true;
-                        return;
-                    }
-                }
-            }
+            // 始终播放死亡动画，饿死判定延后到 on_die_finished / handle_respawn
             body.set_dying_interval(last_tick_sec_);
             if (Global::last_game_mode == Global::GameMode::TIMERACE)
                 body.set_interrupt_threshold(game_config().deathAnimInterruptThreshold);
             Global::audio_manager.play_sfx("die");
             body.switch_to_die();
         };
-        if (died1) apply_death(p1_, snake_body_1_);
-        if (died2) apply_death(p2_, snake_body_2_);
+        if (died1) apply_death(p1_, *snake_body_1_);
+        if (died2) apply_death(p2_, *snake_body_2_);
 
         // DEATHMATCH：死的播动画，活的冻结等待
         if (!finished_ && Global::last_game_mode == Global::GameMode::DEATHMATCH) {
             if (died1 && !died2) {
-                snake_body_2_.draw_in_waiting = true;
-                snake_body_2_.switch_to_waiting();
+                snake_body_2_->draw_in_waiting = true;
+                snake_body_2_->switch_to_waiting();
             }
             if (died2 && !died1) {
-                snake_body_1_.draw_in_waiting = true;
-                snake_body_1_.switch_to_waiting();
+                snake_body_1_->draw_in_waiting = true;
+                snake_body_1_->switch_to_waiting();
             }
             // died1 && died2 → 都 DYING，在 WAITING 解析处等动画播完
         }

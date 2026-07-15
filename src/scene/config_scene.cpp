@@ -83,7 +83,7 @@ void ConfigScene::on_inputevent(InputEvent& event) {
                     break;
                 case Option::DEATH_ANIM_INTERRUPT:
                     Global::audio_manager.play_sfx("ui.value_assign");
-                    cfg.deathAnimInterruptThreshold = std::max(0, cfg.deathAnimInterruptThreshold - static_cast<int>(1 * mult));
+                    cfg.deathAnimInterruptThreshold = std::max(-1, cfg.deathAnimInterruptThreshold - static_cast<int>(1 * mult));
                     break;
                 case Option::BACK:
                     break;
@@ -246,8 +246,12 @@ void ConfigScene::render() {
                     valueStr = cfg.respawnInAdvance ? "ON" : "OFF";
                     break;
                 case Option::DEATH_ANIM_INTERRUPT:
-                    std::snprintf(floatBuf, sizeof(floatBuf), "%d", cfg.deathAnimInterruptThreshold);
-                    valueStr = floatBuf;
+                    if (cfg.deathAnimInterruptThreshold == -1)
+                        valueStr = "off";
+                    else {
+                        std::snprintf(floatBuf, sizeof(floatBuf), "%d", cfg.deathAnimInterruptThreshold);
+                        valueStr = floatBuf;
+                    }
                     break;
                 case Option::BACK:
                     break;

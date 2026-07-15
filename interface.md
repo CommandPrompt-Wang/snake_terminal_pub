@@ -14,7 +14,8 @@ src/
 │   └── scene_switch_event.h # SceneSwitchEvent(next_scene_id)
 ├── config/                  # 配置系统
 │   ├── config.h             # Config 结构体（含 volume 0-100）+ game_config()
-│   └── config_loader.h      # 配置加载/保存
+│   ├── config_loader.h      # 配置加载/保存（声明）
+│   └── config_loader.cpp    # 配置加载/保存（实现）
 ├── audio/                   # 音频系统
 │   ├── audiomanager.h       # AudioManager：共享 ma_device + play_sound/play_sfx/stop_sound
 │   ├── audiostreamplayer.h  # AudioStreamPlayer：包装 AudioLoader，load/play/stop/clone
@@ -180,7 +181,7 @@ AudioStreamPlayer
 ```cpp
 const auto &cfg = game_config();
 cfg.volume;                          // 音量 0-100（线性）
-cfg.allowAcceleration;               // 是否加速（Shift 键半间隔）
+cfg.allowAcceleration;               // 是否加速（Shift 2倍速）
 cfg.toroidalSpace;                   // 环面地图（穿墙）
 cfg.allowThroughOthers;              // 是否穿过对方
 cfg.speed_factor;                    // 整体速度倍率（最小 0.1）
@@ -188,7 +189,7 @@ cfg.increasing_difficulty;           // 难度递增系数（0 = 恒定速度）
 cfg.time_match_duration;             // TIMERACE 限时秒数（0 = 无穷，UI 显示 inf）
 cfg.reborn_costs;                    // TIMERACE 死亡后从尾部切除的节数
 cfg.respawnInAdvance;                // 虚影复活模式（死后随机位置生成半透明虚影）
-cfg.deathAnimInterruptThreshold;     // 死亡动画打断阈值（身长>此值时允许按键跳过剩余 X 标记）
+cfg.deathAnimInterruptThreshold;     // 死亡动画跳过阈值，-1 = 关闭，0+ = 已播放节数超此值时允许按键跳过
 ```
 
 ### 蛇-动画分离架构
@@ -217,9 +218,9 @@ SnakeBody
 2. 动画完成 → `generate_ghost()`（随机位置，alpha=100 半透明）
 3. 玩家看到虚影位置，按键 → `deploy_from_ghost()` → MOVE
 
-**死亡动画打断**（TIMERACE，`body.length > deathAnimInterruptThreshold`）：
-- 前 N 节（N=阈值）X 标记正常播放
-- 阈值节播完后，按任意移动键跳过剩余 X → 直接 WAITING/虚影
+**死亡动画打断**（TIMERACE，`deathAnimInterruptThreshold >= 0`）：
+- 设置 `-1` → 关闭打断，必须看完完整死亡动画
+- 设置 `0+` → 前 N 节 X 标记正常播放，N 节后按移动键跳过剩余
 
 ### 游戏模式
 
