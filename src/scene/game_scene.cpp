@@ -57,14 +57,14 @@ void GameScene::on_enter() {
     snake_body_1_ = SnakeBody(&p1_, 1);
     snake_body_1_.set_scale({2.0,2.0});
     snake_body_1_.on_die_finished = [&]() {
-        if (game_config().respawnInAdvance)
+        if (game_config().respawnInAdvance && Global::last_game_mode == Global::GameMode::TIMERACE)
             p1_.generate_ghost();
     };
     draw_list_.push_back(&snake_body_1_);
     snake_body_2_ = SnakeBody(&p2_, 2);
     snake_body_2_.set_scale({2.0,2.0});
     snake_body_2_.on_die_finished = [&]() {
-        if (game_config().respawnInAdvance)
+        if (game_config().respawnInAdvance && Global::last_game_mode == Global::GameMode::TIMERACE)
             p2_.generate_ghost();
     };
     draw_list_.push_back(&snake_body_2_);
@@ -90,8 +90,8 @@ void GameScene::on_inputevent(InputEvent& event) {
     auto handle_respawn = [&](Snake& s, const Snake& otherSnake,
                               Direction dir, std::deque<Direction>& pending,
                               SnakeBody& body, SnakeBody& otherBody) -> bool {
-        if (!body.is_waiting())
-            return false;
+        if (!body.is_waiting()) return false;
+        if (Global::last_game_mode != Global::GameMode::TIMERACE) return false;
 
         if (game_config().respawnInAdvance) {
             // 虚影模式：部署到预生成的虚影位置（内部处理踩杀）

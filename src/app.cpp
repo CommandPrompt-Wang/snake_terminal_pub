@@ -44,6 +44,11 @@ int main() {
 
     Global::audio_manager.set_volume_all(game_config().volume);
 
+    if (!Global::audio_manager.init_device()) {
+        std::cerr << "Failed to initialize audio device." << std::endl;
+        return 1;
+    }
+
     std::cout << "Done." << std::endl;
 
 

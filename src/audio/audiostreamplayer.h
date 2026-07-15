@@ -111,9 +111,15 @@ public:
         p.pitch_ = pitch_;
         p.volume_linear_ = volume_linear_;
         p.volume_db_ = volume_db_;
+        if (p.audio_loader_) p.audio_loader_->volume_linear() = volume_linear_;
         return p;
     }
 
-    bool isPlaying() const { return is_playing_; }
+    bool isPlaying() const {
+        return audio_loader_ && audio_loader_->getPlayStatus() == AudioLoader::PlayStatus::Playing;
+    }
     bool isLoadedSuccessfully() const { return loaded_successfully_; }
+
+    AudioLoader* get_loader() { return audio_loader_.get(); }
+    const AudioLoader* get_loader() const { return audio_loader_.get(); }
 };

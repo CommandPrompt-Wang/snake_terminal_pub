@@ -1,5 +1,7 @@
 build/
+build-windows/
 dist/
+dist-windows/
 .cache/
 compile_commands.json
 .DS_Store

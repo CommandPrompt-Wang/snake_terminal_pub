@@ -1,6 +1,5 @@
 #pragma once
 
-#include "dr_mp3.h"
 #include "miniaudio.h"
 #include <atomic>
 #include <string>
@@ -50,9 +49,13 @@ public:
     /// 从同一文件重建实例
     AudioLoader clone() const;
 
+    /// 混音到输出缓冲区（AudioManager 回调中调用），返回 false 表示已播完
+    bool mix(float* out, ma_uint32 frameCount, ma_uint32 outChannels, ma_uint32 outSampleRate);
+
+    ma_uint32 channels() const { return channels_; }
+    ma_uint32 sample_rate() const { return sample_rate_; }
+
 private:
-    ma_device device_;
-    bool device_initialized_ = false;
     LoadStatus load_status_;
     std::atomic<PlayStatus> play_status_;
     double pitch_ = 1.0;
@@ -60,13 +63,10 @@ private:
 
     // 预解码缓冲区
     std::vector<float> pcm_buffer_;
+    std::atomic<ma_uint64> cursor_{0};
     ma_uint64 total_frames_ = 0;
-    ma_uint64 cursor_ = 0;
     ma_uint32 channels_ = 0;
     ma_uint32 sample_rate_ = 0;
 
     std::string filepath_;
-
-    static void ma_data_callback(ma_device* pDevice, void* pOutput,
-                                  const void* pInput, ma_uint32 frameCount);
 };

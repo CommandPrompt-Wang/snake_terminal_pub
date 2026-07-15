@@ -1,2 +1,5 @@
 # Auto detect text files and force LF line endings
 * text=auto eol=lf
+
+# Windows batch files require CRLF
+*.bat text eol=crlf

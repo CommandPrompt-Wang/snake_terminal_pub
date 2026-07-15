@@ -45,6 +45,13 @@ if(WIN32)
     target_link_libraries(snake PRIVATE winmm ole32)
 endif()
 
+# MinGW: 静态链接 libgcc/libstdc++，避免依赖额外的 DLL
+if(MINGW)
+    set_target_properties(snake PROPERTIES
+        LINK_FLAGS "-static"
+    )
+endif()
+
 # Symlink compile_commands.json to project root for clangd / VS Code IntelliSense
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
     add_custom_target(compile_commands_link ALL

@@ -44,18 +44,18 @@ void EndScene::on_inputevent(InputEvent& event) {
         case KEY_W:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) - 1 + OPTION_COUNT) % OPTION_COUNT);
-            if (auto* p = Global::audio_manager["ui.index_switch"]) p->play();
+            Global::audio_manager.play_sfx("ui.index_switch");
             event.consume();
             break;
         case KEY_K:
         case KEY_S:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) + 1) % OPTION_COUNT);
-            if (auto* p = Global::audio_manager["ui.index_switch"]) p->play();
+            Global::audio_manager.play_sfx("ui.index_switch");
             event.consume();
             break;
         case KEY_ESCAPE:
-            if (auto* p = Global::audio_manager["ui.back"]) p->play();
+            Global::audio_manager.play_sfx("ui.back");
             finished_ = true;
             next_scene_id_ = SceneId::MENU;
             event.consume();
@@ -70,7 +70,7 @@ void EndScene::on_inputevent(InputEvent& event) {
                     next_scene_id_ = SceneId::GAME;
                     break;
                 case Option::MENU:
-                    if (auto* p = Global::audio_manager["ui.back"]) p->play();
+                    Global::audio_manager.play_sfx("ui.back");
                     finished_ = true;
                     next_scene_id_ = SceneId::MENU;
                     break;

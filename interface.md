@@ -4,8 +4,8 @@
 
 ```
 src/
-├── app.cpp                  # 入口：加载配置 → SceneManager::run()
-├── global.h                 # 全局共享状态（分数、玩家状态、结束原因）
+├── app.cpp                  # 入口：加载配置 → 音频初始化 → SceneManager::run()
+├── global.h                 # 全局共享状态（分数、玩家状态、结束原因、AudioManager）
 ├── utility.h                # 通用类型：Position, Direction, SceneId, GRID_W/H
 ├── event/                   # Event 类层次
 │   ├── event.h              # Event 基类：consume() / is_consumed()
@@ -13,8 +13,14 @@ src/
 │   ├── quit_event.h         # QuitEvent
 │   └── scene_switch_event.h # SceneSwitchEvent(next_scene_id)
 ├── config/                  # 配置系统
-│   ├── config.h             # Config 结构体 + game_config()
+│   ├── config.h             # Config 结构体（含 volume 0-100）+ game_config()
 │   └── config_loader.h      # 配置加载/保存
+├── audio/                   # 音频系统
+│   ├── audiomanager.h       # AudioManager：共享 ma_device + play_sound/play_sfx/stop_sound
+│   ├── audiostreamplayer.h  # AudioStreamPlayer：包装 AudioLoader，load/play/stop/clone
+│   └── backend/
+│       ├── audioloader.h    # AudioLoader：预解码 PCM + mix() 混音（含线性插值重采样）
+│       └── audioloader.cpp  # 实现（单编译单元含 dr_mp3 + miniaudio IMPL）
 ├── render/                  # 渲染组件
 │   ├── draw_list.h          # Draw_List（update/draw 批量管理 + Draw_By_Layer 分层绘制）
 │   ├── render.h             # BasicRenderClass 基类
@@ -23,11 +29,11 @@ src/
 │   ├── scene.h              # Scene 基类 + handle_event() 分发
 │   ├── scene_manager.h/cpp  # 主循环：输入→事件→更新→渲染
 │   ├── menu_scene.h/cpp     # 菜单场景（含 DEATHMATCH / TIMERACE 选择）
-│   ├── config_scene.h/cpp   # 配置设置场景（10 项配置）
-│   ├── game_scene.h/cpp     # 游戏主场景（蛇移动、碰撞、苹果、复活、虚影打断）
+│   ├── config_scene.h/cpp   # 配置设置场景（音量 + 9 项配置）
+│   ├── game_scene.h/cpp     # 游戏主场景（独立 tick 计时、碰撞、苹果、复活、虚影打断）
 │   └── end_scene.h/cpp      # 结算场景（显示胜者与游戏结束原因）
 └── game/                    # 游戏逻辑
-    ├── snake.h              # Snake 类（纯游戏逻辑，不感知动画）
+    ├── snake.h              # Snake 类（纯游戏逻辑，含 check_collide 友元）
     ├── snake.cpp            # Snake 实现
     ├── snake_render.h       # SnakeBlock（蛇身单节精灵） + Vector2 工具函数
     ├── snake_anim.h         # SnakeBody（蛇身渲染体） + 动画状态机
@@ -128,11 +134,53 @@ namespace Global {
 - `MANUAL` → "GAME ENDED"
 - `DEATH` → 逐玩家显示 `player_status1`/`player_status2`（跳过 `ALIVE`），至多两行
 
+### 音频系统
+
+采用**共享设备 + 预解码 PCM + 回调混音**架构：
+
+```
+AudioManager (单例，Global::audio_manager)
+├── ma_device (唯一，48000Hz 立体声 f32)
+├── mp: map<name, AudioStreamPlayer>    模板库（不直接播放）
+├── current_sound_                     当前独占 sound
+└── sfx_pool_                          并发 sfx 克隆池
+
+AudioStreamPlayer
+└── AudioLoader (unique_ptr)
+      ├── 构造时预解码 MP3 → pcm_buffer_（float32 PCM）
+      ├── play() → 重置 cursor_，设状态 Playing
+      ├── stop() → 设状态 Stopped，重置 cursor_
+      ├── clone() → 从同文件重建 AudioLoader
+      └── mix(out, n, outCh, outRate) → 线性插值重采样 + 音量 + 声道转换
+
+回调 (ma_data_callback):
+  memset(output, 0)
+  → 若 current_sound_ 播放中 → loader->mix(...)
+  → 遍历 sfx_pool_ → 每个 loader->mix(...)
+```
+
+**API：**
+
+| 方法 | 说明 |
+|---|---|
+| `play_sound(name)` | 独占播放，停止前一个 sound |
+| `play_sfx(name)` | 克隆模板加入并发池，自动清理已停实例 |
+| `stop_sound()` | 停止当前 sound |
+| `set_volume_all(0-100)` | 设置所有模板音量（线性 0.0–1.0） |
+| `init_device()` | 创建并启动共享 ma_device |
+
+**关键细节：**
+- 所有 MP3 加载时预解码为 float32 PCM，回调只做 memcpy + 混音
+- `play_sfx` 每次 clone 新 AudioLoader 加入池，`cleanup_pool` 移除 `!isPlaying()` 的实例
+- `mix()` 内置线性插值重采样：同采样率走快速路径，不同采样率自动转换（44100→48000 等）
+- 设备持续运行，无声音时输出静音，永不调用 `ma_device_stop`（避免回调内死锁）
+
 ### 配置
 
 ```cpp
 const auto &cfg = game_config();
-cfg.allowAcceleration;               // 是否加速（Shift 键倍速）
+cfg.volume;                          // 音量 0-100（线性）
+cfg.allowAcceleration;               // 是否加速（Shift 键半间隔）
 cfg.toroidalSpace;                   // 环面地图（穿墙）
 cfg.allowThroughOthers;              // 是否穿过对方
 cfg.speed_factor;                    // 整体速度倍率（最小 0.1）
@@ -180,13 +228,17 @@ SnakeBody
 | `DEATHMATCH` | 经典模式，撞墙/撞自己/撞对方即结束 | 死亡方播动画→消失；幸存者冻结→双 WAITING→结算 |
 | `TIMERACE` | 计时赛，死亡后复活继续 | 从尾部切除 `reborn_costs` 节；虚影模式生成半透明 ghost；切空则饿死 |
 
+**Tick 计时：** 两玩家各有独立 `tick_remain1_` / `tick_remain2_`（dt 累积），不再共享时钟。
+Shift 加速按下时 tick 间隔减半（`IsKeyDown(KEY_LEFT_SHIFT)` / `IsKeyDown(KEY_RIGHT_SHIFT)`）。
+碰撞检测 `check_collide(p1, p2, apple, t1, t2)` 按 tick 标志分别判定，同时死亡时双方 `handle_death`。
+
 ### 控制
 
 | 按键 | 作用 |
 |---|---|
 | W/A/S/D | 玩家 1 方向 / 死亡动画打断 |
 | I/J/K/L | 玩家 2 方向 / 死亡动画打断 |
-| L-Shift / R-Shift | 加速（需 `allowAcceleration` 开启） |
+| L-Shift / R-Shift | 加速（按下时 tick 间隔减半，需 `allowAcceleration` 开启） |
 | ESC / Backspace | 暂停/继续 |
 | T | 暂停时返回菜单 |
 | Y | 暂停时手动结束 |

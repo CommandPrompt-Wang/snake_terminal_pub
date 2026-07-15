@@ -37,100 +37,51 @@ AudioLoader::AudioLoader(std::string filepath)
 }
 
 AudioLoader::~AudioLoader() {
-    stop();
-    if (device_initialized_) ma_device_uninit(&device_);
+    // 无需清理 ma_device，由 AudioManager 管理
 }
 
 AudioLoader::AudioLoader(AudioLoader&& other) noexcept
-    : device_(other.device_)
-    , device_initialized_(other.device_initialized_)
-    , load_status_(other.load_status_)
+    : load_status_(other.load_status_)
     , play_status_(other.play_status_.load(std::memory_order_acquire))
     , pcm_buffer_(std::move(other.pcm_buffer_))
     , total_frames_(other.total_frames_)
-    , cursor_(other.cursor_)
     , channels_(other.channels_)
     , sample_rate_(other.sample_rate_)
+    , filepath_(std::move(other.filepath_))
 {
-    std::memset(&other.device_, 0, sizeof(other.device_));
-    other.device_initialized_ = false;
+    cursor_.store(other.cursor_.load(std::memory_order_acquire), std::memory_order_release);
+
     other.load_status_ = LoadStatus::UnknownError;
     other.play_status_.store(PlayStatus::Stopped, std::memory_order_release);
     other.total_frames_ = 0;
-    other.cursor_ = 0;
+    other.cursor_.store(0, std::memory_order_release);
 }
 
 AudioLoader& AudioLoader::operator=(AudioLoader&& other) noexcept {
     if (this != &other) {
-        if (play_status_.load(std::memory_order_acquire) == PlayStatus::Playing)
-            ma_device_stop(&device_);
-        if (device_initialized_) ma_device_uninit(&device_);
+        play_status_.store(PlayStatus::Stopped, std::memory_order_release);
 
-        device_ = other.device_;
-        device_initialized_ = other.device_initialized_;
         load_status_ = other.load_status_;
         play_status_.store(other.play_status_.load(std::memory_order_acquire), std::memory_order_release);
         pcm_buffer_ = std::move(other.pcm_buffer_);
         total_frames_ = other.total_frames_;
-        cursor_ = other.cursor_;
+        cursor_.store(other.cursor_.load(std::memory_order_acquire), std::memory_order_release);
         channels_ = other.channels_;
         sample_rate_ = other.sample_rate_;
+        filepath_ = std::move(other.filepath_);
 
-        std::memset(&other.device_, 0, sizeof(other.device_));
-        other.device_initialized_ = false;
         other.load_status_ = LoadStatus::UnknownError;
         other.play_status_.store(PlayStatus::Stopped, std::memory_order_release);
         other.total_frames_ = 0;
-        other.cursor_ = 0;
+        other.cursor_.store(0, std::memory_order_release);
     }
     return *this;
 }
 
 void AudioLoader::play() {
     if (load_status_ != LoadStatus::Success) return;
-    cursor_ = 0;
-
-    if (!device_initialized_) {
-        ma_device_config config = ma_device_config_init(ma_device_type_playback);
-        config.playback.format   = ma_format_f32;
-        config.playback.channels = channels_;
-        config.sampleRate        = sample_rate_;
-        config.dataCallback      = ma_data_callback;
-        config.pUserData         = this;
-        if (ma_device_init(nullptr, &config, &device_) != MA_SUCCESS) return;
-        device_initialized_ = true;
-    }
-
-    ma_device_start(&device_);
+    cursor_.store(0, std::memory_order_release);
     play_status_.store(PlayStatus::Playing, std::memory_order_release);
-}
-
-void AudioLoader::ma_data_callback(ma_device* pDevice, void* pOutput,
-                                    const void* /*pInput*/, ma_uint32 frameCount) {
-    auto* self = static_cast<AudioLoader*>(pDevice->pUserData);
-
-    if (self->play_status_.load(std::memory_order_acquire) != PlayStatus::Playing) {
-        std::memset(pOutput, 0, frameCount * self->channels_ * sizeof(float));
-        return;
-    }
-
-    auto* out = static_cast<float*>(pOutput);
-    ma_uint64 remain = self->total_frames_ - self->cursor_;
-    ma_uint64 n = frameCount;
-    if (n > remain) n = remain;
-
-    std::memcpy(out, self->pcm_buffer_.data() + self->cursor_ * self->channels_,
-                n * self->channels_ * sizeof(float));
-    self->cursor_ += n;
-
-    // 应用音量
-    float vol = static_cast<float>(self->volume_);
-    if (vol != 1.0f)
-        for (ma_uint64 i = 0; i < n * self->channels_; ++i) out[i] *= vol;
-
-    if (n < frameCount)
-        std::memset(out + n * self->channels_, 0,
-                    (frameCount - n) * self->channels_ * sizeof(float));
 }
 
 void AudioLoader::resume() { play(); }
@@ -138,10 +89,98 @@ void AudioLoader::resume() { play(); }
 void AudioLoader::pause() { stop(); }
 
 void AudioLoader::stop() {
-    auto prev = play_status_.exchange(PlayStatus::Stopped, std::memory_order_release);
-    if (prev == PlayStatus::Playing || prev == PlayStatus::Paused)
-        ma_device_stop(&device_);
-    cursor_ = 0;
+    play_status_.store(PlayStatus::Stopped, std::memory_order_release);
+    cursor_.store(0, std::memory_order_release);
+}
+
+bool AudioLoader::mix(float* out, ma_uint32 frameCount, ma_uint32 outChannels, ma_uint32 outSampleRate) {
+    if (play_status_.load(std::memory_order_acquire) != PlayStatus::Playing)
+        return false;
+
+    ma_uint64 cur = cursor_.load(std::memory_order_acquire);
+    float vol = static_cast<float>(volume_);
+    float srcRatio = static_cast<float>(sample_rate_) / static_cast<float>(outSampleRate);
+
+    // 同采样率 + 同声道 → 快速路径（无插值）
+    if (srcRatio == 1.0f) {
+        ma_uint64 remain = total_frames_ - cur;
+        ma_uint64 n = frameCount;
+        if (n > remain) n = remain;
+
+        if (n == 0) {
+            play_status_.store(PlayStatus::Stopped, std::memory_order_release);
+            return false;
+        }
+
+        if (channels_ == outChannels) {
+            for (ma_uint64 i = 0; i < n * channels_; ++i)
+                out[i] += pcm_buffer_[cur * channels_ + i] * vol;
+        } else if (channels_ == 1 && outChannels == 2) {
+            for (ma_uint64 i = 0; i < n; ++i) {
+                float s = pcm_buffer_[cur + i] * vol;
+                out[i * 2] += s;
+                out[i * 2 + 1] += s;
+            }
+        } else if (channels_ == 2 && outChannels == 1) {
+            for (ma_uint64 i = 0; i < n; ++i) {
+                float s = (pcm_buffer_[(cur + i) * 2] + pcm_buffer_[(cur + i) * 2 + 1]) * 0.5f * vol;
+                out[i] += s;
+            }
+        }
+
+        cur += n;
+        cursor_.store(cur, std::memory_order_release);
+
+        if (cur >= total_frames_) {
+            play_status_.store(PlayStatus::Stopped, std::memory_order_release);
+            return false;
+        }
+        return true;
+    }
+
+    // 采样率转换 + 线性插值
+    for (ma_uint32 i = 0; i < frameCount; ++i) {
+        // 计算源位置
+        float srcPos = static_cast<float>(cur) + static_cast<float>(i) * srcRatio;
+        ma_uint64 srcIdx = static_cast<ma_uint64>(srcPos);
+        float frac = srcPos - static_cast<float>(srcIdx);
+
+        if (srcIdx >= total_frames_ - 1) {
+            // 已播完
+            play_status_.store(PlayStatus::Stopped, std::memory_order_release);
+            return false;
+        }
+
+        if (channels_ == outChannels) {
+            for (ma_uint32 c = 0; c < channels_; ++c) {
+                float a = pcm_buffer_[srcIdx * channels_ + c];
+                float b = pcm_buffer_[(srcIdx + 1) * channels_ + c];
+                out[i * outChannels + c] += (a + (b - a) * frac) * vol;
+            }
+        } else if (channels_ == 1 && outChannels == 2) {
+            float a = pcm_buffer_[srcIdx];
+            float b = pcm_buffer_[srcIdx + 1];
+            float s = (a + (b - a) * frac) * vol;
+            out[i * 2] += s;
+            out[i * 2 + 1] += s;
+        } else if (channels_ == 2 && outChannels == 1) {
+            float aL = pcm_buffer_[srcIdx * 2];
+            float bL = pcm_buffer_[(srcIdx + 1) * 2];
+            float aR = pcm_buffer_[srcIdx * 2 + 1];
+            float bR = pcm_buffer_[(srcIdx + 1) * 2 + 1];
+            out[i] += ((aL + aR) * 0.5f + ((bL + bR) * 0.5f - (aL + aR) * 0.5f) * frac) * vol;
+        }
+    }
+
+    // 推进 cursor（源帧）
+    cur += static_cast<ma_uint64>(static_cast<float>(frameCount) * srcRatio);
+    cursor_.store(cur, std::memory_order_release);
+
+    if (cur >= total_frames_) {
+        play_status_.store(PlayStatus::Stopped, std::memory_order_release);
+        return false;
+    }
+    return true;
 }
 
 double AudioLoader::getDuration() const {
@@ -151,14 +190,14 @@ double AudioLoader::getDuration() const {
 
 double AudioLoader::getCurrentTime() const {
     if (sample_rate_ == 0) return 0.0;
-    return static_cast<double>(cursor_) / sample_rate_;
+    return static_cast<double>(cursor_.load(std::memory_order_acquire)) / sample_rate_;
 }
 
 double AudioLoader::setCurrentTime(double time) {
     if (time < 0.0) time = 0.0;
     double max = getDuration();
     if (time > max) time = max;
-    cursor_ = static_cast<ma_uint64>(time * sample_rate_);
+    cursor_.store(static_cast<ma_uint64>(time * sample_rate_), std::memory_order_release);
     return time;
 }
 
