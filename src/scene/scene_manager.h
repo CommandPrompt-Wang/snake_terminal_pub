@@ -16,7 +16,7 @@
 // Manages the lifecycle and main loop of all Scenes.
 //
 // Each frame:
-//   ① PollInputEvents() → iterate all raylib input
+//   ① EndDrawing() 已内置 PollInputEvents()，此帧直接使用
 //   ② Construct InputEvent objects for each pressed key
 //   ③ current_scene->handle_event(event)  event dispatch
 //   ④ current_scene->update(dt)           logic update

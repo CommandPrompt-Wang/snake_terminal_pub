@@ -47,9 +47,10 @@ src/
 
 ### 单线程主循环（SceneManager::run）
 
+~~其实抄了不少 Godot/Unity 的作业~~
+
 ```
 while (!WindowShouldClose()) {
-    PollInputEvents()
     → 遍历按键白名单，构造 InputEvent(key_code, KeyPress/KeyRelease, repeat)
     → current_scene->handle_event(event)
       → on_event(event)             [通用钩子，可 consume 拦截]
@@ -64,8 +65,7 @@ while (!WindowShouldClose()) {
 }
 ```
 
-所有 raylib 调用（InitWindow, LoadTexture, Draw*, BeginDrawing/EndDrawing）
-都在同一个线程上，不再有 thread_local 问题。
+由于库限制 *~~设计缺陷？~~*，所有 raylib 调用（InitWindow, LoadTexture, Draw*, BeginDrawing/EndDrawing）必须在同一个线程上，否则有 thread_local 问题。
 
 ### Scene 生命周期
 
@@ -307,3 +307,62 @@ Shift 加速按下时 tick 间隔减半（`IsKeyDown(KEY_LEFT_SHIFT)` / `IsKeyDo
 ./build.bat                   # Release 构建
 ./build.bat --debug           # Debug 模式
 ```
+
+### 缺陷
+
+#### 1. 纹理无引用计数（raylib 上游）
+
+raylib 的 `LoadTextureFromImage()` 每次调用 `rlLoadTexture()` 新建 OpenGL 纹理对象，
+不做去重也不维护引用计数。后果：
+
+- 若多个 `Sprite` 共享同图片 → 各自独立加载（不同 texture ID）→ 浪费显存但安全，
+这是我们当前采用的方案
+- 若试图共享 texture ID 供多处使用 → `UnloadTexture` 两次 → 双重释放 → UB
+
+当前方案：`Sprite::refresh_texture()` 按需加载，用完即卸（`UnloadTexture`），
+每个 Sprite 独享自己的 texture ID。官方 demo 也是这种"现用现销"模式。
+没时间也没动力自己搓资源池，目前的方案算是在时间和安全性之间相对最理想的取舍了。
+
+#### 2. 音频单线程依赖（raylib 上游）
+
+raylib 的 `Music`/`Sound` 要求主线程每帧调用 `UpdateMusicStream()` 来解码音频数据
+并填充环形缓冲区。主线程一旦卡顿（纹理加载、复杂逻辑等），缓冲区欠载 → 爆音/丢帧。
+
+我们的方案：基于 miniaudio 自研 AudioManager，**预解码为 PCM + 回调混音**。
+音频线程独立于主线程，不受帧率波动影响，允许音乐和多个音效并行播放。
+代价是缺乏音频总线和实时混音控制 —— 虽然每个 player 有独立的 pitch/volume，
+但难以做精确的动态混音，只能预先使用两遍 loudnorm 在 -18 LUFS 下做好音量平衡。
+
+#### 3. `ImageFromImage` 边界条件错误（已向上游提 PR，Merged）
+
+raylib 的 `ImageFromImage()` 在验证矩形范围时用了严格比较 `>` / `<` 而非 `>=` / `<=`。
+导致从 (0,0) 裁剪或裁剪完整图像时被错误拒绝：
+```
+WARNING: IMAGE: Rectangle provided for ImageToImage not valid
+WARNING: IMAGE: Data is not valid to load texture
+```
+已提交修复 → [raysan5/raylib#5979](https://github.com/raysan5/raylib/pull/5979)
+
+#### 4. `Sprite` 兼职过多（设计取舍）
+
+一个 `Sprite` 同时干了图片加载（`LoadImage`）、GPU 纹理生命周期（`LoadTextureFromImage`/`UnloadTexture`）、
+变换（pos/scale/alpha/flip）、精灵表帧动画（hframes/vframes/during_time）和绘制提交。
+
+严格来说拆成 `Texture` / `Transform` / `SpriteSheet` 三个类更干净，但本项目规模下
+拆了反而增加样板代码。
+
+#### 5. 动画状态机与渲染体耦合（设计取舍）
+
+`SnakeMove`/`SnakeDie`/`SnakeWaiting` 直接持有 `SnakeBody*` 裸指针，
+move 之后还要手动修回去（见 `SnakeBody` 的移动构造函数）。
+
+纯正的 ECS 应该把状态和渲染解耦，但双人贪吃蛇就 2 个角色，上完整的 ECS 属于大炮打蚊子。
+
+#### 6. 物理帧即渲染帧、无独立碰撞系统（raylib 上游 + 设计取舍）
+
+tick 逻辑和 render 跑在同一个 `update(dt)` 回调里，没有独立的固定时间步物理循环。
+碰撞检测（`check_collide`）直接嵌在 `Snake` 友元函数里，而不是独立的 `CollisionSystem`。
+raylib 的 `thread_local` 限制让分离渲染线程变成不可能的任务
+
+
+严格来说这是引擎限制，不完全是我们架构的设计缺陷。~~吕布骑狗了有一说一~~
