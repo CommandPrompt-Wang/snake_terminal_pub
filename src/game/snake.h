@@ -1,6 +1,7 @@
 #pragma once
 #include <deque>
 #include <random>
+#include <utility>
 #include "utility.h"
 #include "config/config.h"
 #include "global.h"
@@ -45,14 +46,21 @@ public:
     void pop_tail();
 
     // -- 高层操作 --
-    bool tick(const Snake& other, Position& apple);       // 单次移动 tick
-    bool respawn(const Snake& other);                     // 复活（扣除分 -> 重定位）
-    void remove_from_back(int count);                     // 从尾部切除
-    void translate(int dx, int dy);                       // 整条蛇平移
+    bool tick(const Snake& other, Position& apple);
+    bool respawn(const Snake& other);
+    void remove_from_back(int count);
+    void translate(int dx, int dy);
+    void set_player_status(Global::PlayerStatus status) const;
 
     // -- 苹果 / 安全位置 --
     friend Position random_apple_pos(const Snake& a, const Snake& b);
     friend Position random_safe_pos(const Snake& a, const Snake& b);
+
+    /// 碰撞预判。tick1/tick2 指示该蛇本帧是否移动（false 则始终返回 ALIVE）
+    friend std::pair<Global::PlayerStatus, Global::PlayerStatus>
+    check_collide(const Snake& s1, const Snake& s2, const Position& apple,
+                  bool tick1, bool tick2);
+
     // ── 虚影（respawnInAdvance）──
     void    generate_ghost();                    // 随机位置 + 平移蛇体
     void    set_ghost(bool on);                  // 切换虚影状态（同时设不可碰撞/可碰撞）
@@ -62,8 +70,6 @@ public:
     bool get_collidable()  const { return collidable_; }
 
 private:
-    void set_player_status(Global::PlayerStatus status) const;
-
     std::deque<Position> body_;
     Direction curDir_ = Direction::DOWN;
     Direction lastMoveDir_ = Direction::DOWN;

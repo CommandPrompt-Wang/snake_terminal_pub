@@ -266,7 +266,9 @@ inline void SnakeMove::update() {
             break;
     }
     snakebody->head[0].update(); snakebody->head[1].update();
-    bool is_speedup = snakebody->snake->get_speed() >= 2;
+    bool is_speedup = (snakebody->playerid == 1)
+        ? IsKeyDown(KEY_LEFT_SHIFT)
+        : IsKeyDown(KEY_RIGHT_SHIFT);
     if (is_speedup) {
         frame_process += GetFrameTime();
         while (frame_process > speedup_duration) {

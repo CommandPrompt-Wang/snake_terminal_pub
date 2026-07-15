@@ -84,35 +84,75 @@ void Snake::pop_tail() {
 
 // -- 高层操作 --
 
+/// 碰撞预判。tick=false 的蛇不移动，其碰撞结果恒为 ALIVE
+std::pair<Global::PlayerStatus, Global::PlayerStatus>
+check_collide(const Snake& s1, const Snake& s2, const Position& apple,
+              bool tick1, bool tick2) {
+    using S = Global::PlayerStatus;
+    auto A = S::ALIVE;
+
+    auto wrap = [](Position h) {
+        if (!game_config().toroidalSpace) return h;
+        if (h.x < 0) h.x = GRID_W - 1; else if (h.x >= GRID_W) h.x = 0;
+        if (h.y < 0) h.y = GRID_H - 1; else if (h.y >= GRID_H) h.y = 0;
+        return h;
+    };
+
+    Position h1 = wrap(s1.next_head());
+    Position h2 = wrap(s2.next_head());
+
+    auto wall  = [&](Position h) { return !game_config().toroidalSpace &&
+        (h.x < 0 || h.x >= GRID_W || h.y < 0 || h.y >= GRID_H); };
+    auto self  = [&](const Snake& s, Position h) {
+        int skip = (h == apple) ? 0 : 1;
+        for (size_t i = skip; i < s.body_.size(); ++i)
+            if (s.body_[i] == h) return true;
+        return false;
+    };
+
+    S r1 = A, r2 = A;
+
+    if (tick1 && wall(h1))  r1 = S::ON_WALL;
+    if (tick2 && wall(h2))  r2 = S::ON_WALL;
+    if (r1 != A || r2 != A) return {r1, r2};
+
+    if (tick1 && self(s1, h1)) r1 = S::ON_SELF;
+    if (tick2 && self(s2, h2)) r2 = S::ON_SELF;
+    if (r1 != A || r2 != A) return {r1, r2};
+
+    if (!game_config().allowThroughOthers && s1.collidable_ && s2.collidable_) {
+        // 吃苹果导致尾巴不动的情况，仍然要判定碰撞
+        auto after = [&](const Snake& s, Position h) {
+            std::deque<Position> b = s.body_;
+            b.push_front(h);
+            if (h != apple) b.pop_back();
+            return b;
+        };
+        auto b1 = after(s1, tick1 ? h1 : s1.body_.front());
+        auto b2 = after(s2, tick2 ? h2 : s2.body_.front());
+        auto in = [](const std::deque<Position>& b, Position h, int skip) {
+            for (size_t i = skip; i < b.size(); ++i)
+                if (b[i] == h) return true;
+            return false;
+        };
+        bool hit12 = tick1 && in(b2, h1, 1);
+        bool hit21 = tick2 && in(b1, h2, 1);
+        if (hit12) r1 = S::ON_PLAYER;
+        if (hit21) r2 = S::ON_PLAYER;
+    }
+
+    return {r1, r2};
+}
+
 bool Snake::tick(const Snake& other, Position& apple) {
     Position head = next_head();
 
-    // 墙壁碰撞 / 环形卷绕
-    if (!game_config().toroidalSpace) {
-        if (head.x < 0 || head.x >= GRID_W || head.y < 0 || head.y >= GRID_H) {
-            set_player_status(Global::PlayerStatus::ON_WALL);
-            return false;
-        }
-    } else {
+    // 环形卷绕
+    if (game_config().toroidalSpace) {
         if (head.x < 0) head.x = GRID_W - 1;
         else if (head.x >= GRID_W) head.x = 0;
         if (head.y < 0) head.y = GRID_H - 1;
         else if (head.y >= GRID_H) head.y = 0;
-    }
-
-    // 自碰
-    if (check_self_collision(head, 1)) {
-        set_player_status(Global::PlayerStatus::ON_SELF);
-        return false;
-    }
-
-    // 碰对方（常规碰撞 + 头碰头互撞 / 同格），虚影不参与碰撞
-    if (!game_config().allowThroughOthers && !other.body_.empty() && other.collidable_ &&
-        (check_body_collision(other.body_, head) ||
-         other.next_head() == body_.front() ||
-         head == other.next_head())) {
-        set_player_status(Global::PlayerStatus::ON_PLAYER);
-        return false;
     }
 
     body_.push_front(head);

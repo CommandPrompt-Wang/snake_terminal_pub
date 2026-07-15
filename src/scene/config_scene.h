@@ -23,6 +23,7 @@ protected:
 
 private:
     enum class Option {
+        VOLUME,
         ALLOW_ACCELERATION,
         TOROIDAL_SPACE,
         ALLOW_THROUGH_OTHERS,
@@ -34,7 +35,7 @@ private:
         DEATH_ANIM_INTERRUPT,
         BACK,
     };
-    static constexpr int OPTION_COUNT = 10;
+    static constexpr int OPTION_COUNT = 11;
     Option current_option_ = Option::ALLOW_ACCELERATION;
     bool finished_ = false;
     int next_scene_id_ = static_cast<int>(SceneId::MENU);

@@ -1,12 +1,24 @@
 #pragma once
+#include <algorithm>
 #include <map>
+#include <memory>
 #include <string>
+#include <vector>
 #include "audio/audiostreamplayer.h"
 
 class AudioManager {
 private:
     std::map<std::string, AudioStreamPlayer> mp;
     std::string current_sound_;
+
+    // sfx 并发池
+    std::map<std::string, std::vector<std::unique_ptr<AudioStreamPlayer>>> sfx_pool_;
+
+    void cleanup_pool(const std::string& name) {
+        auto& v = sfx_pool_[name];
+        v.erase(std::remove_if(v.begin(), v.end(),
+            [](auto& p) { return !p->isPlaying(); }), v.end());
+    }
 
 public:
     AudioManager() {}
@@ -21,7 +33,6 @@ public:
         return it != mp.end() ? &it->second : nullptr;
     }
 
-    /// 独占播放（同一时间只有一个 sound）
     void play_sound(const std::string& name) {
         if (auto* p = (*this)[name]) {
             stop_sound();
@@ -37,15 +48,19 @@ public:
         }
     }
 
-    /// 并发播放（每个 sfx 独立，允许叠加）
     void play_sfx(const std::string& name) {
-        if (auto* p = (*this)[name]) p->play();
+        auto* src = (*this)[name];
+        if (!src) return;
+        cleanup_pool(name);
+        auto inst = std::make_unique<AudioStreamPlayer>(src->clone());
+        if (!inst->isLoadedSuccessfully()) return;
+        inst->play();
+        sfx_pool_[name].push_back(std::move(inst));
     }
 
-    bool erase_player(const std::string& name) {
-        if (!has_player(name)) return false;
-        mp.erase(name);
-        return true;
+    void set_volume_all(int vol_0_100) {
+        float v = vol_0_100 / 100.0f;
+        for (auto& [_, p] : mp) p.set_volume_linear(v);
     }
 
     bool has_player(const std::string& name) {

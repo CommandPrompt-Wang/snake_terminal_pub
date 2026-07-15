@@ -1,4 +1,5 @@
 #pragma once
+#include <algorithm>
 #include <fstream>
 #include <iomanip>
 #include <string>
@@ -45,6 +46,7 @@ static bool load_config(const std::string &path) {
         int i = 0;
         try { i = std::stoi(val); } catch (...) {}
 
+        if (key == "volume")                  cfg.volume                   = std::clamp(i, 0, 100);
         if (key == "allow_acceleration")        cfg.allowAcceleration        = b;
         if (key == "toroidal_space")            cfg.toroidalSpace            = b;
         if (key == "allow_through_others")      cfg.allowThroughOthers       = b;

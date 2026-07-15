@@ -81,10 +81,38 @@ public:
     double& pitch() { return pitch_; }
 
     const double volume_db() const { return volume_db_; }
-    double& volume_db() { return volume_db_; }
+    double& volume_db() {
+        return volume_db_;
+    }
 
     const double volume_linear() const { return volume_linear_; }
-    double& volume_linear() { return volume_linear_; }
+    double& volume_linear() {
+        return volume_linear_;
+    }
+
+    void set_volume_db(double db) {
+        volume_db_ = db;
+        volume_linear_ = std::pow(10.0, db / 20.0);
+        if (audio_loader_) audio_loader_->volume_linear() = volume_linear_;
+    }
+
+    void set_volume_linear(double v) {
+        volume_linear_ = v;
+        volume_db_ = 20.0 * std::log10(std::max(v, 1e-6));
+        if (audio_loader_) audio_loader_->volume_linear() = v;
+    }
+
+    AudioStreamPlayer clone() const {
+        AudioStreamPlayer p;
+        if (audio_loader_) {
+            p.audio_loader_ = std::make_unique<AudioLoader>(audio_loader_->clone());
+            p.loaded_successfully_ = p.audio_loader_->getLoadStatus() == AudioLoader::LoadStatus::Success;
+        }
+        p.pitch_ = pitch_;
+        p.volume_linear_ = volume_linear_;
+        p.volume_db_ = volume_db_;
+        return p;
+    }
 
     bool isPlaying() const { return is_playing_; }
     bool isLoadedSuccessfully() const { return loaded_successfully_; }

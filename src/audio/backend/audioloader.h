@@ -47,6 +47,9 @@ public:
     const double volume_linear() const;
     double& volume_linear();
 
+    /// 从同一文件重建实例
+    AudioLoader clone() const;
+
 private:
     ma_device device_;
     bool device_initialized_ = false;
@@ -61,6 +64,8 @@ private:
     ma_uint64 cursor_ = 0;
     ma_uint32 channels_ = 0;
     ma_uint32 sample_rate_ = 0;
+
+    std::string filepath_;
 
     static void ma_data_callback(ma_device* pDevice, void* pOutput,
                                   const void* pInput, ma_uint32 frameCount);

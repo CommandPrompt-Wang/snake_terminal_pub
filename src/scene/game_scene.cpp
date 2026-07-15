@@ -51,8 +51,9 @@ void GameScene::on_enter() {
     time_elapsed_ = 0;
     time_remaining_ = game_config().time_match_duration;
 
-    last_tick_ = Clock::now();
-    
+    tick_remain1_ = 0;
+    tick_remain2_ = 0;
+
     snake_body_1_ = SnakeBody(&p1_, 1);
     snake_body_1_.set_scale({2.0,2.0});
     snake_body_1_.on_die_finished = [&]() {
@@ -256,48 +257,57 @@ void GameScene::update(float dt) {
         return;
     }
 
-    // 2. 输入 + 加速（仅 MOVE 状态的蛇）
+    // 2. 输入 + 加速
     consume_pending_dir();
 
-    if (game_config().allowAcceleration) {
-        if (snake_body_1_.is_moving())
-            p1_.set_speed(IsKeyDown(KEY_LEFT_SHIFT) ? 2 : 1);
-        if (snake_body_2_.is_moving())
-            p2_.set_speed(IsKeyDown(KEY_RIGHT_SHIFT) ? 2 : 1);
-    }
-
-    // 3. Tick 定时
-    int highScore = std::max((int)p1_.get_body().size() - 3, (int)p2_.get_body().size() - 3);
-    double diffMult = 1.0;
-    if (game_config().increasing_difficulty > 0) {
-        double k = game_config().increasing_difficulty;
-        diffMult = 1.0 + 2.0 * std::log10((k * highScore) / 9.0 + 1.0);
-    }
-    float spd = std::max(0.1f, game_config().speed_factor);
-    double tickMs = 500.0 / (diffMult * spd);
-    last_tick_sec_ = (float)(tickMs / 1000.0);
-    auto now = Clock::now();
-    auto interval = std::chrono::milliseconds(static_cast<int>(tickMs));
-
-    if (now - last_tick_ >= interval) {
-        last_tick_ = now;
-
-        // -- 仅 MOVE 状态的蛇参与 tick --
-        // 双方交替子步，避免加速时因非同时移动导致的碰撞误判
-        bool died1 = false, died2 = false;
-        int spd1 = snake_body_1_.is_moving() ? std::max(p1_.get_speed(), 1) : 0;
-        int spd2 = snake_body_2_.is_moving() ? std::max(p2_.get_speed(), 1) : 0;
-        int maxSpd = std::max(spd1, spd2);
-        for (int step = 0; step < maxSpd; ++step) {
-            if (step < spd1 && !died1) {
-                if (!p1_.tick(p2_, apple_))
-                    died1 = true;
-            }
-            if (step < spd2 && !died2) {
-                if (!p2_.tick(p1_, apple_))
-                    died2 = true;
-            }
+    // 3. Tick —— 独立计时器，加速时缩短间隔而非多步子步
+    auto calc_tick_ms = [&](int score, int player) {
+        double mult = 1.0;
+        if (game_config().increasing_difficulty > 0) {
+            double k = game_config().increasing_difficulty;
+            mult = 1.0 + 2.0 * std::log10((k * std::max(score, 0)) / 9.0 + 1.0);
         }
+        float spd = std::max(0.1f, game_config().speed_factor);
+        double ms = 500.0 / (mult * spd);
+        if (game_config().allowAcceleration) {
+            bool shifting = (player == 1) ? IsKeyDown(KEY_LEFT_SHIFT)
+                                          : IsKeyDown(KEY_RIGHT_SHIFT);
+            if (shifting) ms /= 2.0;
+        }
+        return (float)(ms / 1000.0);
+    };
+
+    // 非 MOVE 状态重置计时器，避免积压；同时预充完整间隔，切回时不突跳
+    if (snake_body_1_.is_moving()) tick_remain1_ -= dt;
+    else tick_remain1_ = calc_tick_ms(std::max(0, (int)p1_.get_body().size() - 3), 1);
+    if (snake_body_2_.is_moving()) tick_remain2_ -= dt;
+    else tick_remain2_ = calc_tick_ms(std::max(0, (int)p2_.get_body().size() - 3), 2);
+
+    bool died1 = false, died2 = false;
+    using S = Global::PlayerStatus;
+
+    while (tick_remain1_ <= 0 || tick_remain2_ <= 0) {
+        bool t1 = tick_remain1_ <= 0 && snake_body_1_.is_moving();
+        bool t2 = tick_remain2_ <= 0 && snake_body_2_.is_moving();
+
+        int sc1 = std::max(0, (int)p1_.get_body().size() - 3);
+        int sc2 = std::max(0, (int)p2_.get_body().size() - 3);
+        float iv1 = calc_tick_ms(sc1, 1);
+        float iv2 = calc_tick_ms(sc2, 2);
+
+        if (t1 || t2) {
+            auto [r1, r2] = check_collide(p1_, p2_, apple_, t1, t2);
+            if (r1 != S::ALIVE) { died1 = true; p1_.set_player_status(r1); }
+            if (r2 != S::ALIVE) { died2 = true; p2_.set_player_status(r2); }
+            if (r1 == S::ALIVE && t1) { p1_.tick(p2_, apple_); tick_remain1_ += iv1; }
+            if (r2 == S::ALIVE && t2) { p2_.tick(p1_, apple_); tick_remain2_ += iv2; }
+        } else {
+            tick_remain1_ = tick_remain2_ = 0;
+            break;
+        }
+        if (died1 || died2) break;
+        last_tick_sec_ = std::min(iv1, iv2);
+    }
 
         // 统一处理死亡
         auto apply_death = [&](Snake& s, SnakeBody& body) {
@@ -353,7 +363,6 @@ void GameScene::update(float dt) {
             }
             // died1 && died2 → 都 DYING，在 WAITING 解析处等动画播完
         }
-    }
 
     draw_list_.update();
 }

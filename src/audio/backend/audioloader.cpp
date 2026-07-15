@@ -14,13 +14,14 @@
 AudioLoader::AudioLoader(std::string filepath)
     : load_status_(LoadStatus::UnknownError)
     , play_status_(PlayStatus::Stopped)
+    , filepath_(std::move(filepath))
 {
-    FILE* test = fopen(filepath.c_str(), "rb");
+    FILE* test = fopen(filepath_.c_str(), "rb");
     if (!test) { load_status_ = LoadStatus::FileNotFound; return; }
     fclose(test);
 
     drmp3 mp3;
-    if (!drmp3_init_file(&mp3, filepath.c_str(), nullptr)) {
+    if (!drmp3_init_file(&mp3, filepath_.c_str(), nullptr)) {
         load_status_ = LoadStatus::DecoderInitFailed; return;
     }
 
@@ -122,6 +123,11 @@ void AudioLoader::ma_data_callback(ma_device* pDevice, void* pOutput,
                 n * self->channels_ * sizeof(float));
     self->cursor_ += n;
 
+    // 应用音量
+    float vol = static_cast<float>(self->volume_);
+    if (vol != 1.0f)
+        for (ma_uint64 i = 0; i < n * self->channels_; ++i) out[i] *= vol;
+
     if (n < frameCount)
         std::memset(out + n * self->channels_, 0,
                     (frameCount - n) * self->channels_ * sizeof(float));
@@ -154,6 +160,10 @@ double AudioLoader::setCurrentTime(double time) {
     if (time > max) time = max;
     cursor_ = static_cast<ma_uint64>(time * sample_rate_);
     return time;
+}
+
+AudioLoader AudioLoader::clone() const {
+    return AudioLoader(filepath_);
 }
 
 AudioLoader::PlayStatus AudioLoader::getPlayStatus() const {

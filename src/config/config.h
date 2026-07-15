@@ -1,7 +1,8 @@
 #pragma once
 
 struct Config {
-    bool allowAcceleration   = true;   // speed boost when holding a direction
+    int volume              = 100;   // 0-100 linear
+    bool allowAcceleration   = true;
     bool toroidalSpace       = false;  // wrap around edges (Pac‑man style)
     bool allowThroughOthers = false; // can pass through the other player
     float speed_factor         = 1.0f;  // overall game speed multiplier (min 0.1)

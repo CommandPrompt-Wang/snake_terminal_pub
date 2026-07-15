@@ -9,7 +9,7 @@
 
 void ConfigScene::on_enter() {
     finished_ = false;
-    current_option_ = Option::ALLOW_ACCELERATION;
+    current_option_ = Option::VOLUME;
 }
 
 void ConfigScene::on_exit() {
@@ -29,7 +29,7 @@ void ConfigScene::on_inputevent(InputEvent& event) {
         case KEY_W:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) - 1 + OPTION_COUNT) % OPTION_COUNT);
-            Global::audio_manager.play_sfx("ui.index_switch");
+            if (auto* p = Global::audio_manager["ui.index_switch"]) p->play();
             event.consume();
             break;
 
@@ -37,47 +37,52 @@ void ConfigScene::on_inputevent(InputEvent& event) {
         case KEY_S:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) + 1) % OPTION_COUNT);
-            Global::audio_manager.play_sfx("ui.index_switch");
+            if (auto* p = Global::audio_manager["ui.index_switch"]) p->play();
             event.consume();
             break;
 
         case KEY_J:
         case KEY_A:
             switch (current_option_) {
+                case Option::VOLUME:
+                    Global::audio_manager.play_sfx("ui.value_assign");
+                    cfg.volume = std::clamp(cfg.volume - (int)(1 * mult), 0, 100);
+                    Global::audio_manager.set_volume_all(cfg.volume);
+                    break;
                 case Option::ALLOW_ACCELERATION:
-                    Global::audio_manager.play_sfx("ui.toggle");
+                    if (auto* p = Global::audio_manager["ui.toggle"]) p->play();
                     cfg.allowAcceleration = !cfg.allowAcceleration;
                     break;
                 case Option::TOROIDAL_SPACE:
-                    Global::audio_manager.play_sfx("ui.toggle");
+                    if (auto* p = Global::audio_manager["ui.toggle"]) p->play();
                     cfg.toroidalSpace = !cfg.toroidalSpace;
                     break;
                 case Option::ALLOW_THROUGH_OTHERS:
-                    Global::audio_manager.play_sfx("ui.toggle");
+                    if (auto* p = Global::audio_manager["ui.toggle"]) p->play();
                     cfg.allowThroughOthers = !cfg.allowThroughOthers;
                     break;
                 case Option::SPEED_FACTOR:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.speed_factor = std::max(0.1f, cfg.speed_factor - 0.1f * mult);
                     break;
                 case Option::INCREASING_DIFFICULTY:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.increasing_difficulty = std::max(0.0f, cfg.increasing_difficulty - 0.1f * mult);
                     break;
                 case Option::TIME_MATCH_DURATION:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.time_match_duration = std::max(0, cfg.time_match_duration - static_cast<int>(1 * mult));
                     break;
                 case Option::REBORN_COSTS:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.reborn_costs = std::max(0, cfg.reborn_costs - static_cast<int>(1 * mult));
                     break;
                 case Option::RESPAWN_IN_ADVANCE:
-                    Global::audio_manager.play_sfx("ui.toggle");
+                    if (auto* p = Global::audio_manager["ui.toggle"]) p->play();
                     cfg.respawnInAdvance = !cfg.respawnInAdvance;
                     break;
                 case Option::DEATH_ANIM_INTERRUPT:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.deathAnimInterruptThreshold = std::max(0, cfg.deathAnimInterruptThreshold - static_cast<int>(1 * mult));
                     break;
                 case Option::BACK:
@@ -89,40 +94,45 @@ void ConfigScene::on_inputevent(InputEvent& event) {
         case KEY_L:
         case KEY_D:
             switch (current_option_) {
+                case Option::VOLUME:
+                    Global::audio_manager.play_sfx("ui.value_assign");
+                    cfg.volume = std::clamp(cfg.volume + (int)(1 * mult), 0, 100);
+                    Global::audio_manager.set_volume_all(cfg.volume);
+                    break;
                 case Option::ALLOW_ACCELERATION:
-                    Global::audio_manager.play_sfx("ui.toggle");
+                    if (auto* p = Global::audio_manager["ui.toggle"]) p->play();
                     cfg.allowAcceleration = !cfg.allowAcceleration;
                     break;
                 case Option::TOROIDAL_SPACE:
-                    Global::audio_manager.play_sfx("ui.toggle");
+                    if (auto* p = Global::audio_manager["ui.toggle"]) p->play();
                     cfg.toroidalSpace = !cfg.toroidalSpace;
                     break;
                 case Option::ALLOW_THROUGH_OTHERS:
-                    Global::audio_manager.play_sfx("ui.toggle");
+                    if (auto* p = Global::audio_manager["ui.toggle"]) p->play();
                     cfg.allowThroughOthers = !cfg.allowThroughOthers;
                     break;
                 case Option::SPEED_FACTOR:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.speed_factor += 0.1f * mult;
                     break;
                 case Option::INCREASING_DIFFICULTY:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.increasing_difficulty += 0.1f * mult;
                     break;
                 case Option::TIME_MATCH_DURATION:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.time_match_duration += static_cast<int>(1 * mult);
                     break;
                 case Option::REBORN_COSTS:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.reborn_costs += static_cast<int>(1 * mult);
                     break;
                 case Option::RESPAWN_IN_ADVANCE:
-                    Global::audio_manager.play_sfx("ui.toggle");
+                    if (auto* p = Global::audio_manager["ui.toggle"]) p->play();
                     cfg.respawnInAdvance = !cfg.respawnInAdvance;
                     break;
                 case Option::DEATH_ANIM_INTERRUPT:
-                    Global::audio_manager.play_sfx("ui.value_assign");
+                    if (auto* p = Global::audio_manager["ui.value_assign"]) p->play();
                     cfg.deathAnimInterruptThreshold += static_cast<int>(1 * mult);
                     break;
                 case Option::BACK:
@@ -133,7 +143,7 @@ void ConfigScene::on_inputevent(InputEvent& event) {
 
         case KEY_ENTER:
         case KEY_SPACE:
-            Global::audio_manager.play_sfx("ui.enter");
+            if (auto* p = Global::audio_manager["ui.enter"]) p->play();
             if (current_option_ == Option::BACK) {
                 finished_ = true;
                 next_scene_id_ = static_cast<int>(SceneId::MENU);
@@ -143,7 +153,7 @@ void ConfigScene::on_inputevent(InputEvent& event) {
 
         case KEY_ESCAPE:
         case KEY_SLASH:
-            Global::audio_manager.play_sfx("ui.enter");
+            if (auto* p = Global::audio_manager["ui.enter"]) p->play();
             finished_ = true;
             next_scene_id_ = static_cast<int>(SceneId::MENU);
             event.consume();
@@ -164,13 +174,14 @@ void ConfigScene::render() {
     // === Title ===
     DrawText("CONFIG",
              screenW / 2 - MeasureText("CONFIG", 53) / 2,
-             screenH / 6 - 25,
+             screenH / 10 - 25,
              53, DARKGREEN);
 
     Config& cfg = game_config();
 
     // === Option labels ===
     const char* labels[] = {
+        "Volume",
         "Allow Acceleration",
         "Toroidal Space",
         "Allow Through Other Player",
@@ -184,8 +195,8 @@ void ConfigScene::render() {
     };
 
     const int optFont = 25;
-    const int optGap  = 58;
-    const int optStartY = screenH / 3 - 70;
+    const int optGap  = 45;
+    const int optStartY = screenH / 5;
 
     for (int i = 0; i < OPTION_COUNT; ++i) {
         int y = optStartY + i * optGap;
@@ -198,6 +209,10 @@ void ConfigScene::render() {
 
         if (!isBack) {
             switch (static_cast<Option>(i)) {
+                case Option::VOLUME:
+                    std::snprintf(floatBuf, sizeof(floatBuf), "%d", cfg.volume);
+                    valueStr = floatBuf;
+                    break;
                 case Option::ALLOW_ACCELERATION:
                     valueStr = cfg.allowAcceleration ? "ON" : "OFF";
                     break;
