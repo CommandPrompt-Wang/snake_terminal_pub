@@ -5,6 +5,7 @@
 #include <string>
 #include <utility>
 #include "backend/audioloader.h"
+#include "utils/log.h"
 
 class AudioStreamPlayer {
     bool is_playing_ = false;
@@ -29,18 +30,21 @@ public:
             audio_loader_ &&
             audio_loader_->getLoadStatus() == AudioLoader::LoadStatus::Success;
 
-        if (loaded_successfully_) {
-            audio_loader_->pitch() = pitch_;
-            audio_loader_->volume_linear() = volume_linear_;
-            volume_db_ = 20.0 * std::log10((std::max)(volume_linear_, 1e-6));
-            is_playing_ = false;
+        if (!loaded_successfully_) {
+            logw("audio load failed: " + filepath);
+            return false;
         }
 
-        return loaded_successfully_;
+        audio_loader_->pitch() = pitch_;
+        audio_loader_->volume_linear() = volume_linear_;
+        volume_db_ = 20.0 * std::log10((std::max)(volume_linear_, 1e-6));
+        is_playing_ = false;
+        return true;
     }
 
     void play() {
         if (!audio_loader_ || !loaded_successfully_) {
+            if (!loaded_successfully_) logw("play() called on unloaded player");
             return;
         }
 
@@ -107,6 +111,7 @@ public:
         if (audio_loader_) {
             p.audio_loader_ = std::make_unique<AudioLoader>(audio_loader_->clone());
             p.loaded_successfully_ = p.audio_loader_->getLoadStatus() == AudioLoader::LoadStatus::Success;
+            if (!p.loaded_successfully_) logw("sfx clone failed: loader not in Success state");
         }
         p.pitch_ = pitch_;
         p.volume_linear_ = volume_linear_;

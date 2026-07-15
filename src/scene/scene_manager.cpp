@@ -8,8 +8,6 @@
 #include "config/config.h"
 #include "raylib.h"
 
-#include <iostream>
-
 SceneManager::SceneManager() {
     // -- Register all Scenes --
     // Indices correspond to Scene enum: 0=MENU, 1=CONFIG, 2=GAME, 3=DIE
@@ -25,6 +23,8 @@ SceneManager::SceneManager() {
 void SceneManager::switch_to(int scene_id) {
     if (scene_id < 0 || scene_id >= static_cast<int>(scenes_.size())) return;
     if (!scenes_[scene_id]) return;
+
+    logd("scene switch: " + std::to_string(current_scene_) + " -> " + std::to_string(scene_id));
 
     // exit current scene
     if (scenes_[current_scene_]) {
@@ -69,6 +69,7 @@ void SceneManager::dispatch_input_events() {
 void SceneManager::run() {
     // -- Initialize raylib window --
     // This is the only place in the entire program where a window is created
+    SetTraceLogCallback(raylib_log_callback);  // 接管 raylib 日志（必须在 InitWindow 之前）
     InitWindow(640, 840, "Snake Terminal");
     SetExitKey(0);  // disable raylib's default ESC→close, handled per-scene
     SetTargetFPS(60);

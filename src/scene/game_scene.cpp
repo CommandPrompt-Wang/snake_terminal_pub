@@ -5,7 +5,6 @@
 #include <algorithm>
 #include <cmath>
 #include <array>
-#include <iostream>
 
 // -- consume buffered direction into actual snake dir --
 void GameScene::consume_pending_dir() {
@@ -31,6 +30,9 @@ GameScene::GameScene()  = default;
 GameScene::~GameScene() = default;
 
 void GameScene::on_enter() {
+    const char* mode = (Global::last_game_mode == Global::GameMode::DEATHMATCH) ? "DEATHMATCH" : "TIMERACE";
+    logd(std::string("game scene enter, mode=") + mode);
+
     pause = false;
     finished_ = false;
     next_scene_id_ = static_cast<int>(SceneId::DIE);
@@ -103,11 +105,13 @@ void GameScene::on_enter() {
 }
 
 void GameScene::on_exit() {
+    logd("game scene exit");
+
     // 停止 BGM
     Global::audio_manager.stop_sound();
 
-    // snake_body_1_->print_pos();  // DEBUG: 蛇身坐标调试
-    // snake_body_2_->print_pos();
+    snake_body_1_->print_pos();
+    snake_body_2_->print_pos();
     draw_list_.clear();
 }
 
@@ -284,6 +288,7 @@ void GameScene::update(float dt) {
         if (dur > 0) {
             time_remaining_ = std::max(0, dur - (int)time_elapsed_);
             if (time_remaining_ <= 0) {
+                logd("game over: TIMEOUT");
                 Global::end_reason = Global::GameOverReason::TIMEOUT;
                 Global::last_score_player1 = p1_.get_score();
                 Global::last_score_player2 = p2_.get_score();
@@ -300,6 +305,7 @@ void GameScene::update(float dt) {
         snake_body_2_->is_waiting()) {
         if (Global::end_reason == Global::GameOverReason::NONE)
             Global::end_reason = Global::GameOverReason::DEATH;
+        logd("game over: DEATHMATCH both dead");
         Global::last_score_player1 = p1_.get_score();
         Global::last_score_player2 = p2_.get_score();
         finished_ = true;
@@ -350,6 +356,8 @@ void GameScene::update(float dt) {
 
         if (t1 || t2) {
             auto [r1, r2] = check_collide(p1_, p2_, apple_, t1, t2);
+            if (r1 != S::ALIVE || r2 != S::ALIVE)
+                logd("collision: P1=" + std::to_string(static_cast<int>(r1)) + " P2=" + std::to_string(static_cast<int>(r2)));
             if (r1 != S::ALIVE) { died1 = true; p1_.set_player_status(r1); }
             if (r2 != S::ALIVE) { died2 = true; p2_.set_player_status(r2); }
             if (r1 == S::ALIVE && t1) {
@@ -373,6 +381,8 @@ void GameScene::update(float dt) {
 
         // 统一处理死亡
         auto apply_death = [&](Snake& s, SnakeBody& body) {
+            auto status = (s.get_player_id() == 1) ? Global::player_status1 : Global::player_status2;
+            logd("P" + std::to_string(s.get_player_id()) + " died, status=" + std::to_string(static_cast<int>(status)));
             // 始终播放死亡动画，饿死判定延后到 on_die_finished / handle_respawn
             body.set_dying_interval(last_tick_sec_);
             if (Global::last_game_mode == Global::GameMode::TIMERACE)

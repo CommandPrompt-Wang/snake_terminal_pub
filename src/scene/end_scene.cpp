@@ -6,6 +6,8 @@
 #include <string>
 
 void EndScene::on_enter() {
+    logd("end scene enter, reason=" + std::to_string(static_cast<int>(Global::end_reason)));
+
     finished_ = false;
     current_option_ = Option::RESTART;
 

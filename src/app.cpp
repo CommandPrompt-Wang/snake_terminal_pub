@@ -1,17 +1,71 @@
-#include <iostream>
+#if defined(_WIN32)
+extern "C" {
+    __declspec(dllimport) int __stdcall SetConsoleOutputCP(unsigned int);
+    __declspec(dllimport) int __stdcall SetConsoleCP(unsigned int);
+    __declspec(dllimport) int __stdcall ImmDisableIME(unsigned int);
+}
+#define CP_UTF8 65001
+#endif
+
 #include "global.h"
 #include "config/config_loader.h"
 #include "scene/scene_manager.h"
 #include "audio/audiomanager.h"
 
-int main() {
-    std::cout << "Welcome to Snake Terminal!" << std::endl;
-    std::cout << "Loading configuration..." << std::endl;
+#include <algorithm>
+#include <clocale>
+#include <cstring>
+#include <filesystem>
+#include <ios>
+#include <string>
+
+static std::string tolower_str(const char* s) {
+    std::string r(s);
+    std::transform(r.begin(), r.end(), r.begin(), ::tolower);
+    return r;
+}
+
+int main(int argc, char* argv[]) {
+    std::ios::sync_with_stdio(false);
+
+    // 切到可执行文件所在目录，确保 snake.cfg、resources/ 等相对路径正确
+    std::error_code ec;
+    std::filesystem::current_path(
+        std::filesystem::canonical(argv[0], ec).parent_path(), ec);
+    if (ec)
+        logw("cannot change to exe directory, cwd unchanged: " + ec.message());
+
+#if defined(_WIN32)
+    SetConsoleOutputCP(CP_UTF8);
+    SetConsoleCP(CP_UTF8);
+    ImmDisableIME(-1);
+#endif
+    std::setlocale(LC_ALL, "C.UTF-8");
+
+    // 解析 --loglevel
+    for (int i = 1; i < argc - 1; ++i) {
+        if (std::strcmp(argv[i], "--loglevel") == 0) {
+            auto val = tolower_str(argv[i + 1]);
+            if (val == "debug")
+                Global::loglevel = LogLevel::Debug;
+            else if (val == "info")
+                Global::loglevel = LogLevel::Info;
+            else if (val == "warning" || val == "warn")
+                Global::loglevel = LogLevel::Warning;
+            else if (val == "error")
+                Global::loglevel = LogLevel::Error;
+            // 非法值 → 静默保持 Info
+            break;
+        }
+    }
+
+    log("Welcome to Snake Terminal! Ciallo～(∠・ω< )⌒★");
+    log("Loading configuration...");
     // load config – silently falls back to defaults on failure
     load_config("snake.cfg");
-    std::cout << "Done." << std::endl;
+    log("Done.");
 
-    std::cout << "Initializing audio..." << std::endl;
+    log("Initializing audio...");
     AudioStreamPlayer snd_bgm, snd_die, snd_eat, snd_gameover_death, snd_gameover_nondeath;
     AudioStreamPlayer snd_index_switch, snd_toggle, snd_value_assign, snd_enter, snd_back;
     bool load_success = true;
@@ -27,7 +81,7 @@ int main() {
     load_success &= snd_back.load("resources/sfx/ui.back.mp3");
 
     if (!load_success) {
-        std::cerr << "Failed to load one or more audio files. Aborting." << std::endl;
+        loge("Failed to load one or more audio files. Aborting.");
         return 1;
     }
 
@@ -45,26 +99,26 @@ int main() {
     Global::audio_manager.set_volume_all(game_config().volume);
 
     if (!Global::audio_manager.init_device()) {
-        std::cerr << "Failed to initialize audio device." << std::endl;
+        loge("Failed to initialize audio device.");
         return 1;
     }
 
-    std::cout << "Done." << std::endl;
+    log("Done.");
 
 
     // -- 单线程 Scene 主循环 --
     // 所有 raylib 操作（InitWindow、LoadTexture、Draw*）仅在
     // SceneManager::run() 内部的同一个线程上发生，不再有 thread_local 问题。
     SceneManager mgr;
-    std::cout << "Starting main loop..." << std::endl;
+    log("Starting main loop...");
     mgr.run();
-    std::cout << "Main loop finished." << std::endl;
+    log("Main loop finished.");
 
     // save config on clean exit
-    std::cout << "Saving configuration..." << std::endl;
+    log("Saving configuration...");
     save_config("snake.cfg");
-    std::cout << "Done." << std::endl;
+    log("Done.");
 
-    std::cout << "Goodbye!" << std::endl;
+    log("Goodbye!");
     return 0;
 }

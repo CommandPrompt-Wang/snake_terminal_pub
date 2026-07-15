@@ -1,15 +1,46 @@
 #include "config/config_loader.h"
 #include "config/config.h"
+#include "utils/log.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
+#include <sstream>
 #include <string>
+
+static std::string defaults_string() {
+    const auto& c = game_config();
+    std::ostringstream s;
+    s << "volume=" << c.volume
+      << " accel=" << (c.allowAcceleration ? "true" : "false")
+      << " toroidal=" << (c.toroidalSpace ? "true" : "false")
+      << " through=" << (c.allowThroughOthers ? "true" : "false")
+      << " speed=" << std::fixed << std::setprecision(1) << c.speed_factor
+      << " diff=" << c.increasing_difficulty
+      << " time=" << c.time_match_duration
+      << " reborn=" << c.reborn_costs
+      << " ghost=" << (c.respawnInAdvance ? "true" : "false")
+      << " interrupt=" << c.deathAnimInterruptThreshold;
+    return s.str();
+}
 
 bool load_config(const std::string& path) {
     std::ifstream f(path);
-    if (!f.is_open()) return false;
+    if (!f.is_open()) {
+        if (std::filesystem::is_directory(path)) {
+            logw("A Foldier?!! Ohh fxxk u! ('" + path + "' is a directory)");
+            return false;
+        }
+        log("config file '" + path + "' not found or inaccessible, first launch?");
+        log("creating one with default values: " + defaults_string());
+        save_config(path);  // 尝试用默认值创建
+        f.open(path);
+        if (!f.is_open()) {
+            logw("cannot create config, using defaults: " + defaults_string());
+            return false;
+        }
+    }
 
     Config& cfg = game_config();
     std::string line;
@@ -37,9 +68,9 @@ bool load_config(const std::string& path) {
 
         bool  b = (val == "1" || val == "true" || val == "yes");
         float f = 0.0f;
-        try { f = std::stof(val); } catch (...) { std::cerr << "[config] failed to parse float: " << key << " = " << val << std::endl; }
         int i = 0;
-        try { i = std::stoi(val); } catch (...) { std::cerr << "[config] failed to parse int: " << key << " = " << val << std::endl; }
+        try { f = std::stof(val); } catch (...) { if (val != "true" && val != "false" && val != "yes" && val != "no") logw("failed to parse float: " + key + " = " + val); }
+        try { i = std::stoi(val); } catch (...) { if (val != "true" && val != "false" && val != "yes" && val != "no") logw("failed to parse int: " + key + " = " + val); }
 
         if (key == "volume")                  cfg.volume                   = std::clamp(i, 0, 100);
         if (key == "allow_acceleration")        cfg.allowAcceleration        = b;
@@ -57,7 +88,10 @@ bool load_config(const std::string& path) {
 
 void save_config(const std::string& path) {
     std::ofstream f(path);
-    if (!f.is_open()) return;
+    if (!f.is_open()) {
+        logw("cannot write config file '" + path + "'");
+        return;
+    }
 
     const Config& cfg = game_config();
     f << "# snake_terminal config\n\n";

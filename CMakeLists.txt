@@ -29,6 +29,7 @@ add_executable(snake
     src/game/snake.cpp
     src/config/config_loader.cpp
     src/audio/backend/audioloader.cpp
+    src/utils/log.cpp
     src/utility.h
     src/game/snake_anim.h
 )
@@ -42,7 +43,7 @@ target_link_libraries(snake PRIVATE raylib)
 
 # miniaudio WASAPI 后端所需的 Windows 系统库
 if(WIN32)
-    target_link_libraries(snake PRIVATE winmm ole32)
+    target_link_libraries(snake PRIVATE winmm ole32 imm32)
 endif()
 
 # MinGW: 静态链接 libgcc/libstdc++，避免依赖额外的 DLL

@@ -3,6 +3,7 @@
 #include "raylib.h"
 
 void MenuScene::on_enter() {
+    logd("menu scene enter");
     finished_ = false;
     current_option_ = Option::START_DEATHMATCH;
     next_scene_id_ = static_cast<int>(SceneId::GAME);
@@ -33,7 +34,7 @@ void MenuScene::on_inputevent(InputEvent& event) {
             break;
 
         case KEY_ESCAPE:
-            Global::audio_manager.play_sfx("ui.enter");
+            // Global::audio_manager.play_sfx("ui.enter");
             Global::request_quit();
             event.consume();
             break;

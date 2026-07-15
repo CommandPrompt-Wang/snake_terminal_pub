@@ -8,6 +8,7 @@
 #include <cstring>
 
 void ConfigScene::on_enter() {
+    logd("config scene enter");
     finished_ = false;
     current_option_ = Option::VOLUME;
 }
@@ -293,8 +294,8 @@ void ConfigScene::render() {
     }
 
     // === Hint at bottom ===
-    DrawText("Arrow keys to navigate / adjust    Shift for x10    ESC to return",
-             screenW / 2 - MeasureText("Arrow keys to navigate / adjust    Shift for x10    ESC to return", 18) / 2,
+    DrawText("WASD or IJKL to navigate / adjust    Shift for x10    ESC to return",
+             screenW / 2 - MeasureText("WASD or IJKL to navigate / adjust    Shift for x10    ESC to return", 18) / 2,
              screenH - 40,
              18, GRAY);
 }

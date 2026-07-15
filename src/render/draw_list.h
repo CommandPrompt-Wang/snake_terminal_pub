@@ -5,7 +5,6 @@
 #include "render/render.h"
 
 #include <list>
-#include <iostream>
 #include <algorithm>
 
 

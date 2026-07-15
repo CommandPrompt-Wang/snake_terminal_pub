@@ -7,6 +7,7 @@
 #include <vector>
 #include "audio/audiostreamplayer.h"
 #include "miniaudio.h"
+#include "utils/log.h"
 
 class AudioManager {
 private:
@@ -70,9 +71,13 @@ public:
         config.sampleRate        = 48000;
         config.dataCallback      = ma_data_callback;
         config.pUserData         = this;
-        if (ma_device_init(nullptr, &config, &device_) != MA_SUCCESS) return false;
+        if (ma_device_init(nullptr, &config, &device_) != MA_SUCCESS) {
+            loge("audio device init failed");
+            return false;
+        }
         device_initialized_ = true;
         ma_device_start(&device_);
+        log("audio device started: 48000Hz stereo f32");
         return true;
     }
 
@@ -88,7 +93,7 @@ public:
 
     void play_sound(const std::string& name) {
         auto it = mp.find(name);
-        if (it == mp.end()) return;
+        if (it == mp.end()) { logw("sound not found: " + name); return; }
         stop_sound();
         it->second.play();
         current_sound_ = name;
@@ -103,10 +108,10 @@ public:
 
     void play_sfx(const std::string& name) {
         auto it = mp.find(name);
-        if (it == mp.end()) return;
+        if (it == mp.end()) { logw("sfx not found: " + name); return; }
         cleanup_pool(name);
         auto inst = std::make_unique<AudioStreamPlayer>(it->second.clone());
-        if (!inst->isLoadedSuccessfully()) return;
+        if (!inst->isLoadedSuccessfully()) { logw("sfx clone load failed: " + name); return; }
         inst->play();
         sfx_pool_[name].push_back(std::move(inst));
     }

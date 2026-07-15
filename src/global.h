@@ -1,9 +1,12 @@
 #pragma once
 
-#include <audio/audiomanager.h>
+#include "audio/audiomanager.h"
+#include "utils/log.h"
 
 // -- 全局共享状态（跨 Scene 共享，仅保留真正需要跨场景的） --
 namespace Global {
+    inline LogLevel loglevel = LogLevel::Info;
+
     inline bool should_quit = false;
 
     inline int last_score_player1 = 0;

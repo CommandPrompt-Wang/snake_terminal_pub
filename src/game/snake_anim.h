@@ -226,12 +226,14 @@ public:
         animate_manager.draw();
     }
     void print_pos() {
-        std::cerr << "snake : " << playerid << '\n';
-        std::cerr << "head0 = " << head[0].get_hide() << " head1 = " << head[1].get_hide() << '\n';
+        std::string info = "snake P" + std::to_string(playerid) + ":"
+                         + " head0=" + std::to_string(head[0].get_hide())
+                         + " head1=" + std::to_string(head[1].get_hide());
         for (auto& i : body) {
-            std::cerr << "##############(" << i.get_pos().x << ", " << i.get_pos().y << ")\n";
-            std::cerr << "###############" << i.get_status() << '\n';
+            info += " (" + std::to_string(i.get_pos().x) + "," + std::to_string(i.get_pos().y)
+                  + ")[" + std::to_string(static_cast<int>(i.get_status())) + "]";
         }
+        logd(info);
     }
     ~SnakeBody() {}
 };

@@ -1,7 +1,6 @@
 #include "game/snake.h"
 #include "global.h"
-
-#include <iostream>
+#include "utils/log.h"
 
 // -- 静态成员 --
 std::mt19937 Snake::rng_{std::random_device{}()};
@@ -163,9 +162,11 @@ Global::PlayerStatus Snake::tick(const Snake& other, Position& apple) {
 
     if (head == apple) {
         ++score_;
+        logd("P" + std::to_string(playerId_) + " eat apple, score=" + std::to_string(score_));
         Global::audio_manager.play_sfx("eat");
         apple = random_apple_pos(*this, other);
         if (apple.x < 0) {
+            logw("board full, no apple position");
             Global::end_reason = Global::GameOverReason::FULL_BOARD;
             set_player_status(Global::PlayerStatus::STARVED);
             return Global::PlayerStatus::STARVED;
@@ -190,6 +191,7 @@ bool Snake::respawn(const Snake& other) {
 
     // 身体切空了 → 饿死
     if (body_.empty()) {
+        logw("P" + std::to_string(playerId_) + " respawn failed: body empty");
         set_player_status(Global::PlayerStatus::STARVED);
         return false;
     }
@@ -197,6 +199,7 @@ bool Snake::respawn(const Snake& other) {
     // 找安全位置放置头部
     Position pos = random_safe_pos(*this, other);
     if (pos.x < 0 || pos.y < 0) {
+        logw("P" + std::to_string(playerId_) + " respawn failed: no safe position");
         set_player_status(Global::PlayerStatus::STARVED);
         return false;
     }
@@ -238,8 +241,8 @@ void Snake::generate_ghost() {
     std::uniform_int_distribution<int> dy(0, GRID_H - 1);
     Position target = {dx(rng_), dy(rng_)};
 
-    std::cerr << "[ghost] P" << playerId_ << " ghost at (" << target.x << "," << target.y
-              << ") from (" << body_[0].x << "," << body_[0].y << ")\n";
+    logd("[ghost] P" + std::to_string(playerId_) + " ghost at (" + std::to_string(target.x) + "," + std::to_string(target.y)
+         + ") from (" + std::to_string(body_[0].x) + "," + std::to_string(body_[0].y) + ")");
 
     int ddx = target.x - body_[0].x;
     int ddy = target.y - body_[0].y;
@@ -249,7 +252,7 @@ void Snake::generate_ghost() {
 }
 
 bool Snake::deploy_from_ghost(Snake& other) {
-    std::cerr << "[ghost] P" << playerId_ << " deploy at (" << body_[0].x << "," << body_[0].y << ")\n";
+    logd("[ghost] P" + std::to_string(playerId_) + " deploy at (" + std::to_string(body_[0].x) + "," + std::to_string(body_[0].y) + ")");
 
     set_ghost(false);
     set_player_status(Global::PlayerStatus::ALIVE);  // 复活成功，清除死亡状态

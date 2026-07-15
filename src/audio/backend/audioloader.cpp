@@ -5,6 +5,7 @@
 #include "miniaudio.h"
 
 #include "audioloader.h"
+#include "utils/log.h"
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -17,12 +18,12 @@ AudioLoader::AudioLoader(std::string filepath)
     , filepath_(std::move(filepath))
 {
     FILE* test = fopen(filepath_.c_str(), "rb");
-    if (!test) { load_status_ = LoadStatus::FileNotFound; return; }
+    if (!test) { load_status_ = LoadStatus::FileNotFound; loge("audio file not found: " + filepath_); return; }
     fclose(test);
 
     drmp3 mp3;
     if (!drmp3_init_file(&mp3, filepath_.c_str(), nullptr)) {
-        load_status_ = LoadStatus::DecoderInitFailed; return;
+        load_status_ = LoadStatus::DecoderInitFailed; loge("mp3 decoder init failed: " + filepath_); return;
     }
 
     channels_ = mp3.channels;
@@ -34,6 +35,8 @@ AudioLoader::AudioLoader(std::string filepath)
     drmp3_uninit(&mp3);
 
     load_status_ = LoadStatus::Success;
+    logd("audio loaded: " + filepath_ + " " + std::to_string(sample_rate_) + "Hz "
+         + std::to_string(channels_) + "ch " + std::to_string(total_frames_) + " frames");
 }
 
 AudioLoader::~AudioLoader() {
@@ -103,6 +106,8 @@ bool AudioLoader::mix(float* out, ma_uint32 frameCount, ma_uint32 outChannels, m
 
     // 同采样率 + 同声道 → 快速路径（无插值）
     if (srcRatio == 1.0f) {
+        static bool logged_fast = false;
+        if (!logged_fast) { logd("mix fast path (no resample): " + filepath_); logged_fast = true; }
         ma_uint64 remain = total_frames_ - cur;
         ma_uint64 n = frameCount;
         if (n > remain) n = remain;
@@ -139,6 +144,12 @@ bool AudioLoader::mix(float* out, ma_uint32 frameCount, ma_uint32 outChannels, m
     }
 
     // 采样率转换 + 线性插值
+    static bool logged_interp = false;
+    if (!logged_interp) {
+        logd("mix resample path: " + filepath_ + " src=" + std::to_string(sample_rate_)
+             + "Hz dst=" + std::to_string(outSampleRate) + "Hz");
+        logged_interp = true;
+    }
     for (ma_uint32 i = 0; i < frameCount; ++i) {
         // 计算源位置
         float srcPos = static_cast<float>(cur) + static_cast<float>(i) * srcRatio;
