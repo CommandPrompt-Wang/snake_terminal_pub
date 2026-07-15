@@ -28,11 +28,12 @@ add_executable(snake
     src/scene/config_scene.cpp
     src/scene/config_scene.h
     src/game/snake.cpp
+    src/audio/backend/audioloader.cpp
     src/utility.h
     src/game/snake_anim.h
 )
 
-target_include_directories(snake PRIVATE ${CMAKE_SOURCE_DIR}/src)
+target_include_directories(snake PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/dr_libs)
 target_link_libraries(snake PRIVATE raylib)
 
 # Symlink compile_commands.json to project root for clangd / VS Code IntelliSense
