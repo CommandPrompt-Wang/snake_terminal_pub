@@ -1,10 +1,10 @@
 #pragma once
 #include "global.h"
 
-class Basic_Render_Class
+class BasicRenderClass
 {
 public:
-    virtual ~Basic_Render_Class() = default;
+    virtual ~BasicRenderClass() = default;
     virtual void draw () {}
     virtual void update () {}
 };

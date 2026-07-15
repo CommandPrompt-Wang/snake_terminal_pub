@@ -95,6 +95,9 @@ void AudioLoader::play() {
         return;
     }
 
+    // 回到开头
+    drmp3_seek_to_pcm_frame(&audio_data_, 0);
+
     // 首次播放时初始化 miniaudio 设备
     if (!device_initialized_) {
         ma_device_config config = ma_device_config_init(ma_device_type_playback);
@@ -158,6 +161,38 @@ void AudioLoader::ma_data_callback(ma_device* pDevice, void* pOutput,
                      (frameCount - framesRead) * self->audio_data_.channels
                          * sizeof(float));
     }
+}
+
+void AudioLoader::resume() {
+    if (load_status_ != LoadStatus::Success) {
+        play_status_.store(PlayStatus::Error, std::memory_order_release);
+        return;
+    }
+
+    // 首次播放时初始化 miniaudio 设备
+    if (!device_initialized_) {
+        ma_device_config config = ma_device_config_init(ma_device_type_playback);
+        config.playback.format   = ma_format_f32;
+        config.playback.channels = audio_data_.channels;
+        config.sampleRate        = audio_data_.sampleRate;
+        config.dataCallback      = ma_data_callback;
+        config.pUserData         = this;
+
+        if (ma_device_init(nullptr, &config, &device_) != MA_SUCCESS) {
+            load_status_ = LoadStatus::DeviceInitFailed;
+            play_status_.store(PlayStatus::Error, std::memory_order_release);
+            return;
+        }
+        device_initialized_ = true;
+    }
+
+    if (ma_device_start(&device_) != MA_SUCCESS) {
+        load_status_ = LoadStatus::DeviceStartFailed;
+        play_status_.store(PlayStatus::Error, std::memory_order_release);
+        return;
+    }
+
+    play_status_.store(PlayStatus::Playing, std::memory_order_release);
 }
 
 void AudioLoader::pause() {

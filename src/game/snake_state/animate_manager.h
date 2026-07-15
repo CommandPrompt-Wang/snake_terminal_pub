@@ -3,7 +3,7 @@
 #include <functional>
 #include <string>
 #include <map>
-class AnimateState : public Basic_Render_Class
+class AnimateState : public BasicRenderClass
 {
 protected:
     std::string state_name;
@@ -19,7 +19,7 @@ public:
     AnimateState(AnimateState&&) = default;
     AnimateState& operator=(AnimateState&&) = default;
 };
-class AnimateManager : public Basic_Render_Class
+class AnimateManager : public BasicRenderClass
 {
 private:
     std::map<std::string, AnimateState*> mp;

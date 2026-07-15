@@ -10,6 +10,7 @@ constexpr int GRID_H = 20;
 struct Position {
     int x, y;
     bool operator==(const Position &o) const { return x == o.x && y == o.y; }
+    bool operator!=(const Position &o) const { return !(*this == o); }
 };
 
 enum class SceneId {

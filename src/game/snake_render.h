@@ -31,7 +31,7 @@ inline bool is_toroidal_neighbor(const Vector2& center, const Vector2& candidate
     return nx == ex && ny == ey;
 }
 
-class SnakeBlock : public Basic_Render_Class
+class SnakeBlock : public BasicRenderClass
 {
 public:
     SnakeBlock (int playerid = 0, Vector2 pos = {0,0})

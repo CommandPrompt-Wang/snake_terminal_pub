@@ -32,6 +32,7 @@ public:
     };
 
     void play();
+    void resume();
     void pause();
     void stop();
     double getDuration() const;

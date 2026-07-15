@@ -56,6 +56,7 @@ private:
     using Clock = std::chrono::steady_clock;
     Clock::time_point last_tick_;
     float time_elapsed_ = 0;
+    int time_remaining_ = 0;       // 计时赛剩余秒数
     float last_tick_sec_ = 0.3f;  // 上次 tick 间隔（秒），用于同步死亡动画速率
 
     // rendering

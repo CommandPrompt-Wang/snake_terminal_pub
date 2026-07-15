@@ -1,7 +1,7 @@
 #pragma once
 #include "src/event/event.h"
 
-class Basic_Render_Class
+class BasicRenderClass
 {
 public:
     virtual void draw () = 0;

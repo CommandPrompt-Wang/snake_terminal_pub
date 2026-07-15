@@ -1,5 +1,6 @@
 #include "config_scene.h"
 #include "config/config.h"
+#include "global.h"
 #include "raylib.h"
 
 #include <algorithm>
@@ -28,6 +29,7 @@ void ConfigScene::on_inputevent(InputEvent& event) {
         case KEY_W:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) - 1 + OPTION_COUNT) % OPTION_COUNT);
+            if (auto* p = Global::audio_manager["menu"]) p->play();
             event.consume();
             break;
 
@@ -35,6 +37,7 @@ void ConfigScene::on_inputevent(InputEvent& event) {
         case KEY_S:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) + 1) % OPTION_COUNT);
+            if (auto* p = Global::audio_manager["menu"]) p->play();
             event.consume();
             break;
 

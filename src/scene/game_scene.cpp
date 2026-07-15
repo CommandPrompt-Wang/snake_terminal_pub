@@ -49,6 +49,7 @@ void GameScene::on_enter() {
 
     apple_ = random_apple_pos(p1_, p2_);
     time_elapsed_ = 0;
+    time_remaining_ = game_config().time_match_duration;
 
     last_tick_ = Clock::now();
     
@@ -66,9 +67,15 @@ void GameScene::on_enter() {
             p2_.generate_ghost();
     };
     draw_list_.push_back(&snake_body_2_);
+
+    // 开始播放 BGM
+    if (auto* p = Global::audio_manager["bgm"]) p->play();
 }
 
 void GameScene::on_exit() {
+    // 停止 BGM
+    if (auto* p = Global::audio_manager["bgm"]) p->stop();
+
     snake_body_1_.print_pos();
     snake_body_2_.print_pos();
     draw_list_.clear();
@@ -99,9 +106,11 @@ void GameScene::on_inputevent(InputEvent& event) {
                 // deploy_from_ghost 可能踩杀了对方蛇 → 触发对方死亡动画
                 if (otherSnake.get_player_id() == 1 && Global::player_status1 == Global::PlayerStatus::ON_PLAYER) {
                     otherBody.set_dying_interval(last_tick_sec_);
+                    if (auto* p = Global::audio_manager["die"]) p->play();
                     otherBody.switch_to_die();
                 } else if (otherSnake.get_player_id() == 2 && Global::player_status2 == Global::PlayerStatus::ON_PLAYER) {
                     otherBody.set_dying_interval(last_tick_sec_);
+                    if (auto* p = Global::audio_manager["die"]) p->play();
                     otherBody.switch_to_die();
                 }
             }
@@ -214,6 +223,20 @@ void GameScene::update(float dt) {
 
     time_elapsed_ += dt;
 
+    // 0. 更新计时赛剩余时间并判定超时
+    if (Global::last_game_mode == Global::GameMode::TIMERACE) {
+        int dur = game_config().time_match_duration;
+        if (dur > 0) {
+            time_remaining_ = std::max(0, dur - (int)time_elapsed_);
+            if (time_remaining_ <= 0) {
+                Global::end_reason = Global::GameOverReason::TIMEOUT;
+                Global::last_score_player1 = p1_.get_score();
+                Global::last_score_player2 = p2_.get_score();
+                finished_ = true;
+            }
+        }
+    }
+
     // 1. 解析 WAITING 状态（由 Snake_Body 渲染层管理 DYING -> WAITING）
     //    - DEATHMATCH: 双蛇 WAITING → 结束（活的蛇已在 tick 后被设为 WAITING）
     //    - TIMERACE:   等待玩家按键重生，这里不做任何操作
@@ -317,6 +340,7 @@ void GameScene::update(float dt) {
             body.set_dying_interval(last_tick_sec_);
             if (Global::last_game_mode == Global::GameMode::TIMERACE)
                 body.set_interrupt_threshold(game_config().deathAnimInterruptThreshold);
+            if (auto* p = Global::audio_manager["die"]) p->play();
             body.switch_to_die();
         };
         if (died1) apply_death(p1_, snake_body_1_);
@@ -371,8 +395,7 @@ void GameScene::render() {
     if (Global::last_game_mode == Global::GameMode::TIMERACE) {
         int dur = game_config().time_match_duration;
         if (dur > 0) {
-            int remain = std::max(0, dur - (int)time_elapsed_);
-            DrawText(TextFormat("TIME: %d", remain), 500, 10, 20, RED);
+            DrawText(TextFormat("TIME: %d", time_remaining_), 500, 10, 20, RED);
         } else {
             DrawText("TIME: inf", 500, 10, 20, RED);
         }

@@ -76,7 +76,7 @@ public:
 // ============================================================
 // SnakeBody — 蛇身渲染体
 // ============================================================
-class SnakeBody : public Basic_Render_Class
+class SnakeBody : public BasicRenderClass
 {
 protected:
     Sprite head[2] = {Sprite("resources/up_head.png",10),Sprite("resources/right_head.png",10)};

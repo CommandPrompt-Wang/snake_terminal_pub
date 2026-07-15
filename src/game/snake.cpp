@@ -120,6 +120,7 @@ bool Snake::tick(const Snake& other, Position& apple) {
 
     if (head == apple) {
         ++score_;
+        if (auto* p = Global::audio_manager["eat"]) p->play();
         apple = random_apple_pos(*this, other);
         if (apple.x < 0) {
             set_player_status(Global::PlayerStatus::STARVED);

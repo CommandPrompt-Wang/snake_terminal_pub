@@ -17,7 +17,7 @@ src/
 │   └── config_loader.h      # 配置加载/保存
 ├── render/                  # 渲染组件
 │   ├── draw_list.h          # Draw_List（update/draw 批量管理 + Draw_By_Layer 分层绘制）
-│   ├── render.h             # Basic_Render_Class 基类
+│   ├── render.h             # BasicRenderClass 基类
 │   └── sprite.h             # Sprite（raylib 纹理精灵，支持 alpha 透明度）
 ├── scene/                   # 场景系统
 │   ├── scene.h              # Scene 基类 + handle_event() 分发

@@ -44,7 +44,7 @@ class Draw_List
 public:
     struct DrawEntry
     {
-        Basic_Render_Class* item = nullptr;
+        BasicRenderClass* item = nullptr;
         bool deleted = false;
     };
     using DrawIter = std::list<DrawEntry>::iterator;
@@ -65,7 +65,7 @@ public:
         }
         
     }
-    void push_back (Basic_Render_Class* item)
+    void push_back (BasicRenderClass* item)
     {
         g_draw_list.push_back(DrawEntry{item, false});
     }

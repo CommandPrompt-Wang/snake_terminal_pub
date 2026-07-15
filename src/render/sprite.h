@@ -10,7 +10,7 @@ using std::cerr;
 
 // 基于 raylib 的简单 Sprite
 // Image 在构造时载入；Texture2D 仅在 update 检测到新帧时更新；析构时 Unload
-class Sprite : public Basic_Render_Class
+class Sprite : public BasicRenderClass
 {
 public:
     // Load Image from file;
