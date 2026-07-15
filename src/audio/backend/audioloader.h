@@ -11,8 +11,8 @@ public:
     ~AudioLoader();
     AudioLoader(const AudioLoader&) = delete;
     AudioLoader& operator=(const AudioLoader&) = delete;
-    AudioLoader(AudioLoader&&);
-    AudioLoader& operator=(AudioLoader&&);
+    AudioLoader(AudioLoader&&) noexcept;
+    AudioLoader& operator=(AudioLoader&&) noexcept;
 
     enum class LoadStatus {
         Success = 0,
