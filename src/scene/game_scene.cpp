@@ -68,13 +68,12 @@ void GameScene::on_enter() {
     };
     draw_list_.push_back(&snake_body_2_);
 
-    // 开始播放 BGM
-    if (auto* p = Global::audio_manager["bgm"]) p->play();
+    Global::audio_manager.play_sound("bgm");
 }
 
 void GameScene::on_exit() {
     // 停止 BGM
-    if (auto* p = Global::audio_manager["bgm"]) p->stop();
+    Global::audio_manager.stop_sound();
 
     snake_body_1_.print_pos();
     snake_body_2_.print_pos();
@@ -95,6 +94,9 @@ void GameScene::on_inputevent(InputEvent& event) {
 
         if (game_config().respawnInAdvance) {
             // 虚影模式：部署到预生成的虚影位置（内部处理踩杀）
+            // 保存对方部署前的状态，部署后对比判断是否被踩杀
+            auto prev_status = (otherSnake.get_player_id() == 1)
+                ? Global::player_status1 : Global::player_status2;
             if (!s.deploy_from_ghost(const_cast<Snake&>(otherSnake))) {
                 Global::end_reason = Global::GameOverReason::DEATH;
                 Global::last_score_player1 = p1_.get_score();
@@ -103,14 +105,13 @@ void GameScene::on_inputevent(InputEvent& event) {
             } else {
                 body.switch_to_move();
                 pending.push_back(dir);
-                // deploy_from_ghost 可能踩杀了对方蛇 → 触发对方死亡动画
-                if (otherSnake.get_player_id() == 1 && Global::player_status1 == Global::PlayerStatus::ON_PLAYER) {
+                // deploy_from_ghost 可能踩杀了对方蛇 → 通过状态变化检测（而非读取可能残留的旧值）
+                auto cur_status = (otherSnake.get_player_id() == 1)
+                    ? Global::player_status1 : Global::player_status2;
+                if (prev_status != Global::PlayerStatus::ON_PLAYER &&
+                    cur_status == Global::PlayerStatus::ON_PLAYER) {
                     otherBody.set_dying_interval(last_tick_sec_);
-                    if (auto* p = Global::audio_manager["die"]) p->play();
-                    otherBody.switch_to_die();
-                } else if (otherSnake.get_player_id() == 2 && Global::player_status2 == Global::PlayerStatus::ON_PLAYER) {
-                    otherBody.set_dying_interval(last_tick_sec_);
-                    if (auto* p = Global::audio_manager["die"]) p->play();
+                    Global::audio_manager.play_sfx("die");
                     otherBody.switch_to_die();
                 }
             }
@@ -191,6 +192,7 @@ void GameScene::on_inputevent(InputEvent& event) {
         // -- 菜单 --
         case KEY_T:
             if (pause) {
+                Global::audio_manager.play_sfx("ui.back");
                 finished_ = true;
                 next_scene_id_ = static_cast<int>(SceneId::MENU);
             }
@@ -281,26 +283,19 @@ void GameScene::update(float dt) {
         last_tick_ = now;
 
         // -- 仅 MOVE 状态的蛇参与 tick --
-        // 先收集死亡结果，双方 tick 完成后再统一处理
+        // 双方交替子步，避免加速时因非同时移动导致的碰撞误判
         bool died1 = false, died2 = false;
-
-        // P1 tick
-        if (snake_body_1_.is_moving()) {
-            for (int i = 0; i < std::max(p1_.get_speed(), 1); ++i) {
-                if (!p1_.tick(p2_, apple_)) {
+        int spd1 = snake_body_1_.is_moving() ? std::max(p1_.get_speed(), 1) : 0;
+        int spd2 = snake_body_2_.is_moving() ? std::max(p2_.get_speed(), 1) : 0;
+        int maxSpd = std::max(spd1, spd2);
+        for (int step = 0; step < maxSpd; ++step) {
+            if (step < spd1 && !died1) {
+                if (!p1_.tick(p2_, apple_))
                     died1 = true;
-                    break;
-                }
             }
-        }
-
-        // P2 tick（即使 P1 死了也要让 P2 完成 tick，不漏双死）
-        if (snake_body_2_.is_moving()) {
-            for (int i = 0; i < std::max(p2_.get_speed(), 1); ++i) {
-                if (!p2_.tick(p1_, apple_)) {
+            if (step < spd2 && !died2) {
+                if (!p2_.tick(p1_, apple_))
                     died2 = true;
-                    break;
-                }
             }
         }
 
@@ -340,7 +335,7 @@ void GameScene::update(float dt) {
             body.set_dying_interval(last_tick_sec_);
             if (Global::last_game_mode == Global::GameMode::TIMERACE)
                 body.set_interrupt_threshold(game_config().deathAnimInterruptThreshold);
-            if (auto* p = Global::audio_manager["die"]) p->play();
+            Global::audio_manager.play_sfx("die");
             body.switch_to_die();
         };
         if (died1) apply_death(p1_, snake_body_1_);

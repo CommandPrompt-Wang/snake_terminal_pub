@@ -9,6 +9,9 @@ void EndScene::on_enter() {
     finished_ = false;
     current_option_ = Option::RESTART;
 
+    // 播放结算音效
+    Global::audio_manager.play_sound("gameover");
+
     int score1 = Global::last_score_player1;
     int score2 = Global::last_score_player2;
 
@@ -27,7 +30,8 @@ void EndScene::on_enter() {
 }
 
 void EndScene::on_exit() {
-    // nothing to clean up
+    Global::audio_manager.stop_sound();
+    Global::audio_manager.stop_sound();
 }
 
 void EndScene::on_inputevent(InputEvent& event) {
@@ -38,15 +42,18 @@ void EndScene::on_inputevent(InputEvent& event) {
         case KEY_W:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) - 1 + OPTION_COUNT) % OPTION_COUNT);
+            Global::audio_manager.play_sfx("ui.index_switch");
             event.consume();
             break;
         case KEY_K:
         case KEY_S:
             current_option_ = static_cast<Option>(
                 (static_cast<int>(current_option_) + 1) % OPTION_COUNT);
+            Global::audio_manager.play_sfx("ui.index_switch");
             event.consume();
             break;
         case KEY_ESCAPE:
+            Global::audio_manager.play_sfx("ui.back");
             finished_ = true;
             next_scene_id_ = SceneId::MENU;
             event.consume();
@@ -60,6 +67,7 @@ void EndScene::on_inputevent(InputEvent& event) {
                     next_scene_id_ = SceneId::GAME;
                     break;
                 case Option::MENU:
+                    Global::audio_manager.play_sfx("ui.back");
                     finished_ = true;
                     next_scene_id_ = SceneId::MENU;
                     break;

@@ -120,7 +120,7 @@ bool Snake::tick(const Snake& other, Position& apple) {
 
     if (head == apple) {
         ++score_;
-        if (auto* p = Global::audio_manager["eat"]) p->play();
+        Global::audio_manager.play_sfx("eat");
         apple = random_apple_pos(*this, other);
         if (apple.x < 0) {
             set_player_status(Global::PlayerStatus::STARVED);
@@ -165,6 +165,7 @@ bool Snake::respawn(const Snake& other) {
         seg.y += dy;
     }
 
+    set_player_status(Global::PlayerStatus::ALIVE);  // 复活成功，清除死亡状态
     curSpeed_ = 1;
     return true;
 }
@@ -207,6 +208,7 @@ bool Snake::deploy_from_ghost(Snake& other) {
     std::cerr << "[ghost] P" << playerId_ << " deploy at (" << body_[0].x << "," << body_[0].y << ")\n";
 
     set_ghost(false);
+    set_player_status(Global::PlayerStatus::ALIVE);  // 复活成功，清除死亡状态
 
     if (check_body_collision(other.body_, body_.front())) {
         other.set_player_status(Global::PlayerStatus::ON_PLAYER);

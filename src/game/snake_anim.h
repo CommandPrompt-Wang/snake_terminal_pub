@@ -79,7 +79,7 @@ public:
 class SnakeBody : public BasicRenderClass
 {
 protected:
-    Sprite head[2] = {Sprite("resources/up_head.png",10),Sprite("resources/right_head.png",10)};
+    Sprite head[2] = {Sprite("resources/img/up_head.png",10),Sprite("resources/img/right_head.png",10)};
     std::vector<SnakeBlock> body;
     Snake* snake;
     int playerid;
@@ -329,7 +329,7 @@ inline void SnakeDie::update() {
     while (dying_process >= dying_duration) {
         dying_process -= dying_duration;
         for (int i = dying_offset; i < std::min((int)snakebody->body.size(), dying_offset + dying_length); i++) {
-            die_block.emplace_back(std::string("resources/die.png"), 5);
+            die_block.emplace_back(std::string("resources/img/die.png"), 5);
             die_block.back().set_scale({2, 2});
             die_block.back().set_pos(snakebody->body[i].get_pos().x * 32, snakebody->body[i].get_pos().y * 32 + 200);
             die_block.back().set_layer(5);

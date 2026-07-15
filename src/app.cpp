@@ -12,12 +12,18 @@ int main() {
     std::cout << "Done." << std::endl;
 
     std::cout << "Initializing audio..." << std::endl;
-    AudioStreamPlayer snd_bgm, snd_die, snd_eat, snd_menu, snd_gameover;
+    AudioStreamPlayer snd_bgm, snd_die, snd_eat, snd_gameover;
+    AudioStreamPlayer snd_index_switch, snd_toggle, snd_value_assign, snd_enter, snd_back;
     bool load_success = true;
-    load_success &= snd_bgm.load("resources/Ngau_Hung.mp3");
-    load_success &= snd_die.load("resources/die.mp3");
-    load_success &= snd_eat.load("resources/eat.mp3");
-    load_success &= snd_menu.load("resources/menu.mp3");
+    load_success &= snd_bgm.load("resources/sound/Ngau_Hung.mp3");
+    load_success &= snd_die.load("resources/sfx/player.die.mp3");
+    load_success &= snd_eat.load("resources/sfx/player.eat.mp3");
+    load_success &= snd_gameover.load("resources/sound/gameover.mp3");
+    load_success &= snd_index_switch.load("resources/sfx/ui.index_switch.mp3");
+    load_success &= snd_toggle.load("resources/sfx/ui.toggle.mp3");
+    load_success &= snd_value_assign.load("resources/sfx/ui.value_assign.mp3");
+    load_success &= snd_enter.load("resources/sfx/ui.enter.mp3");
+    load_success &= snd_back.load("resources/sfx/ui.back.mp3");
 
     if (!load_success) {
         std::cerr << "Failed to load one or more audio files. Aborting." << std::endl;
@@ -27,7 +33,12 @@ int main() {
     Global::audio_manager.add_player("bgm", snd_bgm);
     Global::audio_manager.add_player("die", snd_die);
     Global::audio_manager.add_player("eat", snd_eat);
-    Global::audio_manager.add_player("menu", snd_menu);
+    Global::audio_manager.add_player("gameover", snd_gameover);
+    Global::audio_manager.add_player("ui.index_switch", snd_index_switch);
+    Global::audio_manager.add_player("ui.toggle", snd_toggle);
+    Global::audio_manager.add_player("ui.value_assign", snd_value_assign);
+    Global::audio_manager.add_player("ui.enter", snd_enter);
+    Global::audio_manager.add_player("ui.back", snd_back);
 
     std::cout << "Done." << std::endl;
 
