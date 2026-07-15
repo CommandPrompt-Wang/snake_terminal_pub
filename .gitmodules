@@ -4,3 +4,6 @@
 [submodule "third_party/dr_libs"]
 	path = third_party/dr_libs
 	url = git@github.com:mackron/dr_libs.git
+[submodule "third_party/miniaudio"]
+	path = third_party/miniaudio
+	url = git@github.com:mackron/miniaudio.git

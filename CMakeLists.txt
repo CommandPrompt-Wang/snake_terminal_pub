@@ -33,8 +33,17 @@ add_executable(snake
     src/game/snake_anim.h
 )
 
-target_include_directories(snake PRIVATE ${CMAKE_SOURCE_DIR}/src ${CMAKE_SOURCE_DIR}/third_party/dr_libs)
+target_include_directories(snake PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/third_party/dr_libs
+    ${CMAKE_SOURCE_DIR}/third_party/miniaudio
+)
 target_link_libraries(snake PRIVATE raylib)
+
+# miniaudio WASAPI 后端所需的 Windows 系统库
+if(WIN32)
+    target_link_libraries(snake PRIVATE winmm ole32)
+endif()
 
 # Symlink compile_commands.json to project root for clangd / VS Code IntelliSense
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
