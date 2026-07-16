@@ -51,14 +51,12 @@ bash ./pack.bat
 
 参数会透传（如 `--debug`、`--clean`、`--build-raylib`）。
 
-> **出问题时用分离脚本。** 黑魔法依赖混用 CRLF/LF 换行，编辑器或 Git 可能把它搞坏。若路由失败、heredoc 报错、或行为异常，请直接调用平台专用脚本：
+> **出问题时用分离脚本。** 黑魔法依赖混用 CRLF/LF 换行：batch 段（至 `END_WIN` 含）须 **CRLF**，shell 段须 **LF**。若 shell 段被编辑器保存成 CRLF，WSL 下路径会带 `\r` 导致 `build-linux.sh: 没有那个文件或目录`。`.gitattributes` 中已对 `build.bat` / `pack.bat` 设 `-text` 防止 Git 自动转换。
 >
 > | 用途 | Linux | Windows |
 > |------|-------|---------|
 > | 构建 | `build-linux.sh` | `build-windows.bat` |
 > | 打包 | `pack-linux.sh` | `pack-windows.bat` |
->
-> 维护者须知：batch 段（至 `END_WIN` 含）须 CRLF，shell 段须 LF；`.gitattributes` 中已对 `build.bat` / `pack.bat` 设 `-text` 防止 Git 自动转换。
 
 ```bash
 ./build-linux.sh              # 等价于 bash ./build.bat
