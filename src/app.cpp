@@ -81,7 +81,7 @@ int main(int argc, char* argv[]) {
     log("Initializing audio...");
     // 启动阶段预加载所有音源 → 注册到 AudioManager → 启动播放设备
     AudioStreamPlayer snd_bgm, snd_die, snd_eat, snd_gameover_death, snd_gameover_nondeath;
-    AudioStreamPlayer snd_index_switch, snd_toggle, snd_value_assign, snd_enter, snd_back;
+    AudioStreamPlayer snd_index_switch, snd_toggle, snd_value_assign, snd_enter, snd_back, snd_gameexit;
     bool load_success = true;
     load_success &= snd_bgm.load("resources/sound/mountain_spider.mp3");
     load_success &= snd_die.load("resources/sfx/player.die.mp3");
@@ -93,6 +93,7 @@ int main(int argc, char* argv[]) {
     load_success &= snd_value_assign.load("resources/sfx/ui.value_assign.mp3");
     load_success &= snd_enter.load("resources/sfx/ui.enter.mp3");
     load_success &= snd_back.load("resources/sfx/ui.back.mp3");
+    load_success &= snd_gameexit.load("resources/sfx/ui.gameexit.mp3");
 
     if (!load_success) {
         loge("Failed to load one or more audio files. Aborting.");
@@ -109,6 +110,7 @@ int main(int argc, char* argv[]) {
     Global::audio_manager.add_player("ui.value_assign", std::move(snd_value_assign));
     Global::audio_manager.add_player("ui.enter", std::move(snd_enter));
     Global::audio_manager.add_player("ui.back", std::move(snd_back));
+    Global::audio_manager.add_player("ui.gameexit", std::move(snd_gameexit));
 
     Global::audio_manager.set_volume_all(game_config().volume);
 

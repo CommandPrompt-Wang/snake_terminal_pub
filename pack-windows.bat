@@ -4,8 +4,10 @@
 :: ============================================================
 
 chcp 65001 2>&1 > nul
-echo 打包后如无法运行请自行修改pack-windows.evb中的打包路径
-timeout 1 2>&1 > nul
+echo 打包后如无法运行请自行修改 pack-windows.evb 中的打包路径
+echo 如果新增了资源，请 ** 务必 ** 记得也更新 pack-windows.evb ，添加文件内容
+echo 等待 3 秒，按任意键继续
+timeout 3 2>&1 > nul
 
 setlocal enabledelayedexpansion
 

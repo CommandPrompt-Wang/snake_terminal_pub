@@ -8,6 +8,7 @@ namespace Global {
     inline LogLevel loglevel = LogLevel::Info;
 
     inline bool should_quit = false;
+    inline bool quit_pending = false;
 
     inline int last_score_player1 = 0;
     inline int last_score_player2 = 0;
@@ -55,12 +56,25 @@ namespace Global {
         TIMERACE,
     };
 
-    inline GameMode last_game_mode = GameMode::DEATHMATCH;  
-
-    inline void request_quit() { should_quit = true; }
-    inline bool is_quit_requested() { return should_quit; }
-
-    inline void reset() { should_quit = false; }
+    inline GameMode last_game_mode = GameMode::DEATHMATCH;
 
     inline AudioManager audio_manager;  // 全局单例，场景通过 play_sound / play_sfx 驱动
+
+    inline void request_quit() {
+        if (quit_pending || should_quit) return;
+        quit_pending = true;
+        audio_manager.play_quit_sfx();
+    }
+    inline bool is_quit_requested() { return should_quit; }
+    inline bool is_quit_pending() { return quit_pending; }
+
+    inline void finalize_quit() {
+        quit_pending = false;
+        should_quit = true;
+    }
+
+    inline void reset() {
+        should_quit = false;
+        quit_pending = false;
+    }
 } // namespace Global

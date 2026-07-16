@@ -1,5 +1,6 @@
 #pragma once
 #include <algorithm>
+#include <atomic>
 #include <map>
 #include <memory>
 #include <mutex>
@@ -27,7 +28,7 @@
 class AudioManager {
 private:
     struct Command {
-        enum Type { PlaySound, StopSound, AddSfx, SetVolume };
+        enum Type { PlaySound, StopSound, AddSfx, SetVolume, PlayQuitSfx };
         Type type;
         std::string name;
         std::unique_ptr<AudioStreamPlayer> sfx;
@@ -39,6 +40,8 @@ private:
 
     // 仅音频回调线程读写（命令队列 drain 后）
     std::vector<std::unique_ptr<AudioStreamPlayer>> sfx_pool_;
+    std::unique_ptr<AudioStreamPlayer> quit_sfx_;
+    std::atomic<bool> quit_sfx_playing_{false};
 
     std::mutex cmd_mutex_;
     std::vector<Command> cmd_queue_;  // 主线程写入，回调线程 swap 后消费
@@ -135,5 +138,10 @@ public:
 
     bool has_player(const std::string& name) {
         return mp.find(name) != mp.end();
+    }
+
+    void play_quit_sfx();
+    bool is_quit_sfx_playing() const {
+        return quit_sfx_playing_.load(std::memory_order_acquire);
     }
 };

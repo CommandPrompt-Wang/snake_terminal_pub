@@ -93,7 +93,11 @@ void SceneManager::run() {
         //       Do NOT call it here again — it would reset key edge-detection and drop inputs.
         dispatch_input_events();
 
-        // ③ Check if QuitEvent was triggered
+        // ③ 退出音效播完后再真正退出
+        if (Global::is_quit_pending()) {
+            if (!Global::audio_manager.is_quit_sfx_playing())
+                Global::finalize_quit();
+        }
         if (Global::is_quit_requested()) break;
 
         Scene* current = scenes_[current_scene_].get();

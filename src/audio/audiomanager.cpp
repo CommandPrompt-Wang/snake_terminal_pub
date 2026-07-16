@@ -50,9 +50,37 @@ void AudioManager::process_commands() {
             // 同时调整模板与正在播放的 SFX 实例
             for (auto& [_, p] : mp) p.set_volume_linear(cmd.volume);
             for (auto& p : sfx_pool_) p->set_volume_linear(cmd.volume);
+            if (quit_sfx_) quit_sfx_->set_volume_linear(cmd.volume);
+            break;
+        case Command::PlayQuitSfx: {
+            auto it = mp.find("ui.gameexit");
+            if (it == mp.end()) {
+                quit_sfx_playing_ = false;
+                break;
+            }
+            quit_sfx_ = std::make_unique<AudioStreamPlayer>(it->second.clone());
+            if (!quit_sfx_->isLoadedSuccessfully()) {
+                quit_sfx_.reset();
+                quit_sfx_playing_ = false;
+                break;
+            }
+            quit_sfx_->play();
+            quit_sfx_playing_ = true;
             break;
         }
+        }
     }
+}
+
+void AudioManager::play_quit_sfx() {
+    if (!has_player("ui.gameexit")) {
+        quit_sfx_playing_ = false;
+        return;
+    }
+    quit_sfx_playing_ = true;
+    Command cmd;
+    cmd.type = Command::PlayQuitSfx;
+    push_command(std::move(cmd));
 }
 
 void AudioManager::cleanup_pool() {
@@ -87,6 +115,16 @@ void AudioManager::ma_data_callback(ma_device* pDevice, void* pOutput,
     for (auto& p : mgr->sfx_pool_) {
         auto* ld = p->get_loader();
         if (ld) ld->mix(out, frameCount, ch, rate);
+    }
+
+    // 3) 退出音效（播完后再允许进程退出）
+    if (mgr->quit_sfx_) {
+        auto* ld = mgr->quit_sfx_->get_loader();
+        if (ld) ld->mix(out, frameCount, ch, rate);
+        if (!mgr->quit_sfx_->isPlaying()) {
+            mgr->quit_sfx_.reset();
+            mgr->quit_sfx_playing_ = false;
+        }
     }
 
     mgr->cleanup_pool();
