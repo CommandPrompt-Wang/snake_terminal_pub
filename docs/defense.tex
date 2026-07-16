@@ -141,7 +141,7 @@ void handle_event(Event& event) {
   \vspace{0.3em}
   结算显示：
   \begin{itemize}
-    \item \texttt{FULL\_BOARD} $\rightarrow$ You've filled everywhere!!!
+    \item \texttt{FULL\_BOARD} $\rightarrow$ YOU'VE FILLED EVERYWHERE!!!
     \item \texttt{TIMEOUT} $\rightarrow$ TIME LIMIT REACHED
     \item \texttt{MANUAL} $\rightarrow$ GAME ENDED
     \item \texttt{DEATH} $\rightarrow$ 逐玩家显示死因（跳过 ALIVE）
@@ -160,7 +160,7 @@ void handle_event(Event& event) {
       \toprule
       模式 & 规则 & 死亡后 \\
       \midrule
-      Deathmatch & 撞墙 / 己 / 对方即终局
+      Death Match & 撞墙 / 己 / 对方即终局
         & 死亡方动画后消失；幸存者冻结 $\rightarrow$ 结算 \\
       Time Race & 限时计分，可复活
         & 切尾 \texttt{reborn\_costs}；虚影；切空则饿死 \\

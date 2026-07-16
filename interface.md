@@ -331,7 +331,7 @@ raylib 的 `Music`/`Sound` 要求主线程每帧调用 `UpdateMusicStream()` 来
 我们的方案：基于 miniaudio 自研 AudioManager，**预解码为 PCM + 回调混音**。
 音频线程独立于主线程，不受帧率波动影响，允许音乐和多个音效并行播放。
 代价是缺乏音频总线和实时混音控制 —— 虽然每个 player 有独立的 pitch/volume，
-但难以做精确的动态混音，只能预先使用两遍 loudnorm 在 -18 LUFS 下做好音量平衡。
+但难以做精确的动态混音，只能预先使用两遍 loudnorm 在 -16 LUFS 下做好音量平衡。
 
 #### 3. `ImageFromImage` 边界条件错误（已向上游提 PR，Merged）
 

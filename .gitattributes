@@ -3,3 +3,6 @@
 
 # Windows batch files require CRLF
 *.bat text eol=crlf
+
+# windows enigma packing
+pack-windows.evb text eol=crlf
