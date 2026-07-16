@@ -72,10 +72,13 @@ Categories=Game;ArcadeGame;
 Terminal=false
 EOF
 
-# 图标
-if [ -f "$DIST_DIR/resources/img/apple.png" ]; then
-    cp "$DIST_DIR/resources/img/apple.png" "$APPDIR/snake.png"
-    echo "  ✓ 图标"
+# 图标（resources/misc/icon.png → AppDir/snake.png，供 .desktop Icon=snake 使用）
+ICON="$DIST_DIR/resources/misc/icon.png"
+if [ -f "$ICON" ]; then
+    cp "$ICON" "$APPDIR/snake.png"
+    echo "  ✓ 图标 (resources/misc/icon.png)"
+else
+    echo "  [WARNING] 未找到 $ICON"
 fi
 
 # AppRun

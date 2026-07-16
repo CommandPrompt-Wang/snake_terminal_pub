@@ -41,6 +41,14 @@ target_link_libraries(snake PRIVATE raylib)
 
 if(WIN32)
     target_link_libraries(snake PRIVATE winmm ole32 imm32)
+
+    set(SNAKE_ICON "${CMAKE_SOURCE_DIR}/resources/misc/icon.ico")
+    if(EXISTS "${SNAKE_ICON}")
+        set(SNAKE_RC "${CMAKE_BINARY_DIR}/snake.rc")
+        string(REPLACE "\\" "/" SNAKE_ICON_RES "${SNAKE_ICON}")
+        file(WRITE "${SNAKE_RC}" "IDI_ICON1 ICON \"${SNAKE_ICON_RES}\"\n")
+        target_sources(snake PRIVATE "${SNAKE_RC}")
+    endif()
 endif()
 
 if(MINGW)
