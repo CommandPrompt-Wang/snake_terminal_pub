@@ -1,22 +1,23 @@
 # Fdb version 4
-["xdvipdfmx"] 1784164996.30586 "defense.xdv" "defense.pdf" "defense" 1784164996.55176 0
-  "defense.xdv" 1784164996.26197 89300 adf084f8055f336abef21f023ee587b4 "xelatex"
+["xdvipdfmx"] 1784166324.9183 "defense.xdv" "defense.pdf" "defense" 1784166325.18709 0
+  "defense.xdv" 1784166324.86959 145980 85180119e3c41e5539cb44edcf7beb46 "xelatex"
   (generated)
   "defense.pdf"
   (rewritten before read)
-["xelatex"] 1784164995.58283 "defense.tex" "defense.xdv" "defense" 1784164996.55056 0
+["xelatex"] 1784166323.99349 "defense.tex" "defense.xdv" "defense" 1784166325.18583 0
   "/usr/local/texlive/2026/texmf-dist/fonts/map/fontname/texfonts.map" 1577235249 3524 cb3e574dea2d1052e39280babc910dc8 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/adobe/zapfding/pzdr.tfm" 1136768653 1528 f853c4d1b4e0550255e02831fdc8496f ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/cmextra/cmex7.tfm" 1246382020 1004 54797486969f23fa377b128694d548df ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam10.tfm" 1246382020 916 f87d7c45f9c908e672703b83b72241a3 ""
+  "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam5.tfm" 1246382020 924 9904cf1d39e9767e7a3622f2a125a565 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/symbols/msam7.tfm" 1246382020 928 2dc8d444221b7a635bb58038579b861a ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm10.tfm" 1246382020 908 2921f8a10601f252058503cc6570e581 ""
+  "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm5.tfm" 1246382020 940 75ac932a52f80982a9f8ea75d03a34cf ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/amsfonts/symbols/msbm7.tfm" 1246382020 940 228d6584342e91276bf566bcf9716b83 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmex10.tfm" 1136768653 992 662f679a0b3d2d53c1b94050fdaa3f50 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmmi12.tfm" 1136768653 1524 4414a8315f39513458b80dfc63bff03a ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmr10.tfm" 1136768653 1296 45809c5a464d5f32c8f98ba97c1bb47f ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmr12.tfm" 1136768653 1288 655e228510b4c2a1abe905c368440826 ""
-  "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmr17.tfm" 1136768653 1292 296a67155bdbfc32aa9c636f21e91433 ""
   "/usr/local/texlive/2026/texmf-dist/fonts/tfm/public/cm/cmsy10.tfm" 1136768653 1124 6c73e740cf17375f03eec0ee63599741 ""
   "/usr/local/texlive/2026/texmf-dist/tex/generic/atbegshi/atbegshi.sty" 1575674566 24708 5584a51a7101caf7e6bbf1fc27d8f7b1 ""
   "/usr/local/texlive/2026/texmf-dist/tex/generic/bigintcalc/bigintcalc.sty" 1576625341 40635 c40361e206be584d448876bba8a64a3b ""
@@ -138,7 +139,7 @@
   "/usr/local/texlive/2026/texmf-dist/tex/latex/cjk/texinput/CJKfntef.sty" 1634853225 12851 25a9b5cc006609feb5c9a20ce24a5392 ""
   "/usr/local/texlive/2026/texmf-dist/tex/latex/ctex/ctexhook.sty" 1657829894 6505 33157acfddefdd8fd513e2308e07a435 ""
   "/usr/local/texlive/2026/texmf-dist/tex/latex/etoolbox/etoolbox.sty" 1759437024 46885 8953c67ffba03252c6090aa19568b8ba ""
-  "/usr/local/texlive/2026/texmf-dist/tex/latex/extsizes/size17.clo" 1184601865 6192 e3cc1a474ef0c7d678bf6fa6ce717d4a ""
+  "/usr/local/texlive/2026/texmf-dist/tex/latex/extsizes/size14.clo" 1137110130 6214 cc6d832fdd2fc5f4a20ee1a002f45d0f ""
   "/usr/local/texlive/2026/texmf-dist/tex/latex/fontspec/fontspec-xetex.sty" 1759176595 164714 a0cc5579dc5aec4384653d8dd1b3832a ""
   "/usr/local/texlive/2026/texmf-dist/tex/latex/fontspec/fontspec.cfg" 1532898934 549 c4adac819276241fea8eb79c5ab7b99e ""
   "/usr/local/texlive/2026/texmf-dist/tex/latex/fontspec/fontspec.sty" 1759176595 3804 debc05110ffb506cef68ea4e72c7bcee ""
@@ -191,12 +192,12 @@
   "/usr/local/texlive/2026/texmf-dist/web2c/texmf.cnf" 1770478701 43630 e9fa012910491fe5ae08a72c3c2997a7 ""
   "/usr/local/texlive/2026/texmf-var/web2c/xetex/xelatex.fmt" 1780034569 5948560 b71d858c86ab866f54066498a06bc3b0 ""
   "/usr/local/texlive/2026/texmf.cnf" 1774209515 577 648cd9f92f9c0eac486f4c71c85cfbbe ""
-  "defense.aux" 1784164996.26137 3298 d22cf317f62f4fc511393a8b4c3c9c32 "xelatex"
-  "defense.nav" 1784164996.26192 1821 990c21fe5c0b37aa45e2c1948fbdc04e "xelatex"
-  "defense.out" 1784164996.26177 292 68d4dec17ef789ab363da2f35e7dfea0 "xelatex"
-  "defense.tex" 1784164992.40544 5564 2a16876d2dbc26ff242b1398c0569e0a ""
-  "defense.toc" 1784164996.26193 190 7f5832a9c11251706cb0d8e46d141512 "xelatex"
-  "defense.vrb" 1784164996.23112 296 fecce9e26f7deaeca540e8f49d0f25b9 "xelatex"
+  "defense.aux" 1784166324.86867 5269 667920cdfe696c3c122047b8671fbd0d "xelatex"
+  "defense.nav" 1784166324.86952 2911 1469d8b810660988a6d8f9fde470fffd "xelatex"
+  "defense.out" 1784166324.8693 482 2b150fb839ca387d98964ec468a4085c "xelatex"
+  "defense.tex" 1784166323.8543 12286 61dc083e4f21b1ac9cd196e80d5cc1b3 ""
+  "defense.toc" 1784166324.86955 303 d06c9201e1b07cb39eeccb6e93bd2c6e "xelatex"
+  "defense.vrb" 1784166324.82362 307 eb8978a4dda2114981e63fa390d3af52 "xelatex"
   (generated)
   "defense.aux"
   "defense.log"

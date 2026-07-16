@@ -1,5 +1,4 @@
-% !TEX program = xelatex
-\documentclass[aspectratio=169,17pt]{beamer}
+\documentclass[aspectratio=169,14pt]{beamer}
 
 \usepackage{fontspec}
 \usepackage{xeCJK}
@@ -10,13 +9,15 @@
 \setmainfont[Path=/System/Library/Fonts/]{Helvetica.ttc}
 
 \usetheme{Madrid}
-\usecolortheme{default}
-\setbeamertemplate{navigation symbols}{}
-\setbeamertemplate{footline}[frame number]
+% \usecolortheme{default}
+% \setbeamertemplate{navigation symbols}{}
+% \setbeamertemplate{footline}[frame number]
+\useoutertheme{miniframes}
 
-\title{Snake Terminal}
+\title[Snake Terminal]{基于raylib实现的贪吃蛇}
 \subtitle{双人贪吃蛇 —— 课程答辩}
-\author{编程实战作业}
+\author{王文洲、赵勇哲}
+\institute[四川大学]{Sichuan University}
 \date{\today}
 
 \begin{document}
@@ -29,66 +30,201 @@
   \tableofcontents
 \end{frame}
 
+% ============================================================
 \section{项目概述}
+% ============================================================
 
 \begin{frame}{项目简介}
   \begin{itemize}
     \item \textbf{Snake Terminal}：C++17 + raylib 的双人图形化贪吃蛇
-    \item 场景驱动主循环；玩法可配置；含动画、音效与日志
-    \item 构建：CMake + \texttt{build.sh}/\texttt{build.bat}；配置：\texttt{snake.cfg}
+    \item 架构：Scene 回调式单线程主循环（参考 Godot / Unity 场景思路）
+    \item 玩法可配置；含动画状态机、虚影复活、自研音频与日志
+    \item 构建：CMake + \texttt{build.sh} / \texttt{build.bat}；配置：\texttt{snake.cfg}
     \item 依赖：raylib（子模块）、miniaudio、dr\_mp3
   \end{itemize}
 
-  \vspace{0.8em}
+  \vspace{0.4em}
   \begin{block}{目标}
-    逻辑与表现解耦、场景可扩展，在双人玩法之上做出完整的工程闭环。
+    逻辑与表现解耦、场景可扩展，在双人玩法之上做出完整工程闭环。
   \end{block}
 \end{frame}
 
+% ============================================================
 \section{系统架构}
+% ============================================================
 
-\begin{frame}{模块划分}
+\begin{frame}[fragile]{目录结构}
+\begin{verbatim}
+src/
+  app.cpp          入口：切目录→CLI→配置→音频→主循环
+  global.h         跨场景状态 + AudioManager
+  event/           Event / Input / Quit / SceneSwitch
+  config/          Config + loader
+  audio/           AudioManager / Player / Loader
+  render/          DrawList / Sprite
+  utils/           线程安全彩色日志
+  scene/           Menu / Config / Game / End
+  game/            Snake + SnakeBody 动画状态机
+\end{verbatim}
+\end{frame}
+
+\begin{frame}{场景流与生命周期}
   \begin{columns}[T]
-    \begin{column}{0.52\textwidth}
-      \begin{itemize}
-        \item \texttt{scene/} 菜单、配置、对局、结算
-        \item \texttt{game/} 蛇逻辑 + 动画状态机
-        \item \texttt{event/} 可消费事件分发
-        \item \texttt{render/} Sprite / 分层 DrawList
-        \item \texttt{audio/} 预解码混音音频
-        \item \texttt{config/}、\texttt{utils/} 配置与日志
-      \end{itemize}
-    \end{column}
-    \begin{column}{0.44\textwidth}
+    \begin{column}{0.42\textwidth}
       \textbf{场景流}
       \begin{center}
-        菜单 \\[0.3em]
-        $\swarrow$\quad$\searrow$ \\[0.3em]
-        配置\quad 游戏 \\[0.3em]
-        $\searrow$\quad$\swarrow$ \\[0.3em]
+        菜单 \\[0.2em]
+        $\swarrow$\quad$\searrow$ \\[0.2em]
+        配置\quad 游戏 \\[0.2em]
+        $\searrow$\quad$\swarrow$ \\[0.2em]
         结算 $\rightarrow$ 菜单
       \end{center}
+    \end{column}
+    \begin{column}{0.54\textwidth}
+      \footnotesize
+      \begin{tabular}{@{}ll@{}}
+        \toprule
+        阶段 & 方法 \\
+        \midrule
+        进入 & \texttt{on\_enter()} \\
+        输入 & \texttt{on\_inputevent} \\
+        更新 & \texttt{update(dt)} \\
+        渲染 & \texttt{render()} \\
+        退出 & \texttt{on\_exit()} \\
+        切换 & \texttt{is\_finished} / next \\
+        \bottomrule
+      \end{tabular}
     \end{column}
   \end{columns}
 \end{frame}
 
-\begin{frame}{主循环与事件}
-  \textbf{SceneManager::run}（单线程）
-
+\begin{frame}{主循环（SceneManager::run）}
+  \textbf{单线程}，每帧：
   \begin{enumerate}
-    \item 按键白名单 $\rightarrow$ \texttt{InputEvent}
-    \item \texttt{handle\_event}：通用钩子 $\rightarrow$ 类型分发（可 \texttt{consume}）
-    \item \texttt{update(dt)} / 场景切换
-    \item \texttt{render()}（BeginDrawing / EndDrawing）
+    \item 按键白名单 $\rightarrow$ 构造 \texttt{InputEvent}（Press / Release / repeat）
+    \item \texttt{handle\_event}：\texttt{on\_event} 通用钩子 $\rightarrow$ \texttt{dynamic\_cast} 分发
+    \item \texttt{update(dt)}；若 \texttt{is\_finished} $\rightarrow$ \texttt{switch\_to}
+    \item \texttt{BeginDrawing} $\rightarrow$ \texttt{render()} $\rightarrow$ \texttt{EndDrawing}
   \end{enumerate}
 
-  \vspace{0.5em}
+  \vspace{0.3em}
   \begin{alertblock}{单线程约束}
-    raylib 的 OpenGL context 与 \texttt{thread\_local} 要求窗口、纹理、绘制同线程。
+    所有 raylib 调用（InitWindow / LoadTexture / Draw*）必须同线程，
+    否则 OpenGL context 与 \texttt{thread\_local} 出问题。
   \end{alertblock}
 \end{frame}
 
-\begin{frame}{逻辑与动画分离}
+\begin{frame}[fragile]{事件分发}
+\begin{verbatim}
+void handle_event(Event& event) {
+  if (event.is_consumed()) return;
+  on_event(event);         // (1) 通用钩子，可拦截
+  if (event.is_consumed()) return;
+  on_event_internal(event);// (2) dynamic_cast -> 具体类型
+}
+\end{verbatim}
+  \vspace{0.3em}
+  子类只需覆盖需要的处理程序（如 \texttt{on\_inputevent}），
+  用 \texttt{event.consume()} 阻止后续处理。
+\end{frame}
+
+\begin{frame}{全局共享状态}
+  \footnotesize
+  \begin{itemize}
+    \item 分数：\texttt{last\_score\_player1/2}
+    \item 玩家状态：\texttt{ALIVE / ON\_WALL / ON\_SELF / ON\_PLAYER / STARVED}
+    \item 结束原因（高位不覆盖低位）：\\
+      \texttt{FULL\_BOARD > TIMEOUT > MANUAL > DEATH}
+    \item 模式：\texttt{DEATHMATCH} / \texttt{TIMERACE}
+  \end{itemize}
+
+  \vspace{0.3em}
+  结算显示：
+  \begin{itemize}
+    \item \texttt{FULL\_BOARD} $\rightarrow$ You've filled everywhere!!!
+    \item \texttt{TIMEOUT} $\rightarrow$ TIME LIMIT REACHED
+    \item \texttt{MANUAL} $\rightarrow$ GAME ENDED
+    \item \texttt{DEATH} $\rightarrow$ 逐玩家显示死因（跳过 ALIVE）
+  \end{itemize}
+\end{frame}
+
+% ============================================================
+\section{玩法设计}
+% ============================================================
+
+\begin{frame}{双模式}
+  \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{@{}p{2.2cm}p{4.2cm}p{5.5cm}@{}}
+      \toprule
+      模式 & 规则 & 死亡后 \\
+      \midrule
+      Deathmatch & 撞墙 / 己 / 对方即终局
+        & 死亡方动画后消失；幸存者冻结 $\rightarrow$ 结算 \\
+      Time Race & 限时计分，可复活
+        & 切尾 \texttt{reborn\_costs}；虚影；切空则饿死 \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+
+  \vspace{0.4em}
+  \textbf{Tick 计时}：两玩家独立 \texttt{tick\_remain1\_/2\_}（dt 累积）。\\
+  Shift 按下时 tick 间隔减半；\texttt{check\_collide} 按 tick 标志分别判定，
+  同时死亡则双方 \texttt{handle\_death}。
+\end{frame}
+
+\begin{frame}{操作}
+  \begin{table}
+    \centering
+    \footnotesize
+    \begin{tabular}{@{}ll@{}}
+      \toprule
+      按键 & 作用 \\
+      \midrule
+      W/A/S/D & 玩家 1 方向 / 死亡动画打断 \\
+      I/J/K/L & 玩家 2 方向 / 死亡动画打断 \\
+      L-Shift / R-Shift & 加速（需 \texttt{allowAcceleration}） \\
+      ESC / Backspace & 暂停 / 继续 \\
+      T / Y（暂停时） & 回菜单 / 手动结束 \\
+      Shift+A/D（配置） & 调整量 $\times 10$ \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+\end{frame}
+
+\begin{frame}{配置（snake.cfg）}
+  \footnotesize
+  \begin{columns}[T]
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item \texttt{volume}（0--100）
+        \item \texttt{allowAcceleration}
+        \item \texttt{toroidalSpace} 环面
+        \item \texttt{allowThroughOthers}
+        \item \texttt{speed\_factor}（$\ge 0.1$）
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.5\textwidth}
+      \begin{itemize}
+        \item \texttt{increasing\_difficulty}
+        \item \texttt{time\_match\_duration}（0=inf）
+        \item \texttt{reborn\_costs}
+        \item \texttt{respawnInAdvance} 虚影
+        \item \texttt{deathAnimInterruptThreshold}
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.5em}
+  缺项用默认值补全，正常退出写回完整文件；读写失败仅打警告，不影响运行。
+\end{frame}
+
+% ============================================================
+\section{核心实现}
+% ============================================================
+
+\begin{frame}{蛇逻辑与动画分离}
   \begin{columns}[T]
     \begin{column}{0.48\textwidth}
       \textbf{Snake}（纯逻辑）
@@ -96,89 +232,135 @@
         \item 移动、碰撞、得分
         \item 复活、尾部切除
         \item 虚影 / 可碰撞开关
+        \item \textbf{不感知}动画
       \end{itemize}
     \end{column}
     \begin{column}{0.48\textwidth}
-      \textbf{SnakeBody} 状态机
+      \textbf{SnakeBody} + AnimateManager
       \begin{itemize}
-        \item Move：移动 / 加速特效
-        \item Die：逐节 X 标记
-        \item Waiting：虚影或冻结
+        \item \texttt{SnakeMove}：移动/加速
+        \item \texttt{SnakeDie}：逐节 X
+        \item \texttt{SnakeWaiting}：虚影/冻结
       \end{itemize}
     \end{column}
   \end{columns}
 
-  \vspace{0.8em}
-  由 \texttt{GameScene} 驱动：\\
-  MOVE $\to$ DIE $\to$ WAITING $\to$ MOVE \\
-  双玩家独立 tick 计时；Shift 按下时 tick 间隔减半。
+  \vspace{0.5em}
+  由 \texttt{GameScene} 驱动转换：\\
+  MOVE $\xrightarrow{\text{死亡}}$ DIE $\xrightarrow{\text{播完/打断}}$ WAITING $\xrightarrow{\text{按键}}$ MOVE
 \end{frame}
 
-\section{玩法与工程}
+\begin{frame}{虚影复活与动画打断}
+  \textbf{Ghost}（TIMERACE + \texttt{respawnInAdvance}）：
+  \begin{enumerate}
+    \item 死亡 $\rightarrow$ 原位播放 X 标记动画
+    \item 动画完成 $\rightarrow$ 先切尾扣分，再 \texttt{generate\_ghost()}（半透明）
+    \item 玩家确认位置后按键 $\rightarrow$ \texttt{deploy\_from\_ghost()}（不再重复扣分）
+  \end{enumerate}
 
-\begin{frame}{双模式与操作}
+  \vspace{0.3em}
+  \textbf{死亡动画打断}（\texttt{deathAnimInterruptThreshold}）：
+  \begin{itemize}
+    \item $-1$：关闭，必须看完
+    \item $0+$：前 N 节正常播，之后按移动键跳过剩余
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{音频系统}
+  \textbf{共享设备 + 预解码 PCM + 回调混音}
+
+  \begin{itemize}
+    \item \texttt{AudioManager}：唯一 \texttt{ma\_device}（48kHz 立体声 f32）
+    \item 模板库不直接播；\texttt{play\_sound} 独占，\texttt{play\_sfx} 克隆入并发池
+    \item \texttt{AudioLoader}：加载时预解码 MP3 $\rightarrow$ float32 PCM
+    \item \texttt{mix()}：线性插值重采样 + 音量 + 声道转换
+    \item 设备持续运行，无声输出静音，避免 \texttt{ma\_device\_stop} 死锁
+  \end{itemize}
+
+  \vspace{0.2em}
+  对比 raylib Music：主线程卡顿会导致欠载；本方案音频线程独立于帧率。
+\end{frame}
+
+\begin{frame}{日志系统}
+  线程安全彩色日志，级别过滤 + 接管 raylib 日志：
+
   \begin{table}
     \centering
-    \small
+    \footnotesize
     \begin{tabular}{@{}lll@{}}
       \toprule
-      模式 & 规则 & 死亡后 \\
+      级别 & 函数 & 颜色 \\
       \midrule
-      Deathmatch & 撞墙 / 己 / 对方即终局 & 动画后结算 \\
-      Time Race & 限时计分，可复活 & 切尾 + 虚影/重部署 \\
+      Debug & \texttt{logd} & 青 \\
+      Info & \texttt{log} & 绿 \\
+      Warning & \texttt{logw} & 黄 \\
+      Error & \texttt{loge} & 红 \\
       \bottomrule
     \end{tabular}
   \end{table}
 
-  \vspace{0.6em}
-  P1：WASD\quad P2：IJKL\quad Shift：加速 \\
-  ESC 暂停；暂停后 T 回菜单 / Y 强制结束
+  \vspace{0.3em}
+  CLI：\texttt{./dist/snake --loglevel debug}（默认 Info）\\
+  启动时切到可执行文件目录；Windows 额外设 UTF-8 + 禁用 IME。
 \end{frame}
 
-\begin{frame}{可配置规则}
-  \texttt{snake.cfg} 持久化，缺项自动补全：
-  \begin{itemize}
-    \item 音量、加速、环面地图、是否穿过对方
-    \item 速度倍率、难度递增、限时与复活代价
-    \item \textbf{虚影复活}：半透明预览位置后再部署
-    \item \textbf{死亡动画打断}：阈值后可按键跳过（$-1$ 关闭）
-  \end{itemize}
-\end{frame}
+% ============================================================
+\section{设计取舍与贡献}
+% ============================================================
 
-\begin{frame}{技术亮点}
+\begin{frame}{已知限制与取舍}
+  \footnotesize
   \begin{enumerate}
-    \item \textbf{场景 + 事件}：生命周期清晰，事件可拦截
-    \item \textbf{逻辑 $\perp$ 表现}：Snake 与动画状态机解耦
-    \item \textbf{自研音频}：预解码 PCM + 回调混音；BGM 独占 / SFX 并发池
-    \item \textbf{日志}：级别过滤、彩色输出、接管 raylib 日志
-    \item \textbf{上游贡献}：修复 raylib \texttt{ImageFromImage} 边界问题（已合并）
+    \item \textbf{纹理无引用计数}（raylib）：各 Sprite 独享 texture，用完即卸，安全但费显存
+    \item \textbf{自研音频}：绕开 raylib Music 主线程依赖；缺总线级实时混音，预用 loudnorm 平衡
+    \item \textbf{Sprite 职责偏多}：加载 / 纹理 / 变换 / 帧动画合一；本规模下拆分收益不大
+    \item \textbf{状态机持裸指针}：move 后需修复；双角色不上完整 ECS
+    \item \textbf{物理帧=渲染帧}：无独立固定步；碰撞嵌在 Snake 友元函数中
   \end{enumerate}
 \end{frame}
 
-\section{总结}
+\begin{frame}{上游贡献}
+  \begin{block}{raylib \texttt{ImageFromImage} 边界错误}
+    矩形校验用了严格比较 $>$ / $<$ 而非 $\ge$ / $\le$，
+    导致从 $(0,0)$ 裁剪或裁剪完整图像被错误拒绝。
+  \end{block}
+
+  \vspace{0.5em}
+  已提交并合并：\\
+  \url{https://github.com/raysan5/raylib/pull/5979}
+\end{frame}
+
+% ============================================================
+\section{构建与总结}
+% ============================================================
 
 \begin{frame}[fragile]{构建与运行}
 \begin{verbatim}
+# Linux / macOS
 ./build.sh                 # 增量构建
-./build.sh --build-raylib  # 含 raylib
+./build.sh --debug         # Debug
+./build.sh --build-raylib  # 含 raylib 重编译
+./build.sh --clean
+
+# Windows (MinGW)
+./build.bat / ./build.bat --debug
+
 ./dist/snake --loglevel debug
 \end{verbatim}
-
-  \vspace{0.5em}
-  Windows 可用 \texttt{build.bat}；启动时切到可执行文件目录，保证相对路径正确。
 \end{frame}
 
 \begin{frame}{总结}
   \begin{block}{已完成}
-    双人双模式；场景/事件框架；可配置玩法；动画与虚影；音频与日志。
+    双人双模式；Scene/事件框架；可配置玩法；动画与虚影；
+    自研音频与日志；配置持久化；上游 PR。
   \end{block}
 
-  \vspace{0.5em}
+  \vspace{0.4em}
   \begin{block}{可继续}
-    地图障碍 / 关卡；网络对战；资源池与更细的渲染拆分。
+    地图障碍 / 关卡；网络对战；纹理资源池；渲染职责拆分。
   \end{block}
 
-  \vspace{1em}
+  \vspace{0.8em}
   \begin{center}
     {\Large 谢谢老师！欢迎提问}
   \end{center}

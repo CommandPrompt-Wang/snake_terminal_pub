@@ -1,9 +1,13 @@
 \frametitle{构建与运行}
 \begin{verbatim}
+# Linux / macOS
 ./build.sh                 # 增量构建
-./build.sh --build-raylib  # 含 raylib
+./build.sh --debug         # Debug
+./build.sh --build-raylib  # 含 raylib 重编译
+./build.sh --clean
+
+# Windows (MinGW)
+./build.bat / ./build.bat --debug
+
 ./dist/snake --loglevel debug
 \end{verbatim}
-
-  \vspace{0.5em}
-  Windows 可用 \texttt{build.bat}；启动时切到可执行文件目录，保证相对路径正确。
