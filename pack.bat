@@ -3,6 +3,10 @@
 ::  pack-windows.bat — Package snake into a single .exe via Enigma VB
 :: ============================================================
 
+chcp 65001 2>&1 > nul
+echo 打包后如无法运行请自行修改pack-windows.evb中的打包路径
+timeout 1 2>&1 > nul
+
 setlocal enabledelayedexpansion
 
 :: ---- 可配置项 ----
@@ -34,3 +38,5 @@ echo "==> Running Enigma Virtual Box..."
 "%ENIGMA%" "%EVB%"
 
 echo "==> Done."
+
+timeout 3 2>&1 > nul
