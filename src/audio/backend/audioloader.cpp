@@ -101,7 +101,7 @@ bool AudioLoader::mix(float* out, ma_uint32 frameCount, ma_uint32 outChannels, m
         return false;
 
     ma_uint64 cur = cursor_.load(std::memory_order_acquire);
-    float vol = static_cast<float>(volume_);
+    float vol = volume_.load(std::memory_order_relaxed);
     float srcRatio = static_cast<float>(sample_rate_) / static_cast<float>(outSampleRate);
 
     // 同采样率 + 同声道 → 快速路径（无插值）
@@ -226,5 +226,5 @@ AudioLoader::LoadStatus AudioLoader::getLoadStatus() const {
 
 const double AudioLoader::pitch() const { return pitch_; }
 double& AudioLoader::pitch() { return pitch_; }
-const double AudioLoader::volume_linear() const { return volume_; }
-double& AudioLoader::volume_linear() { return volume_; }
+float AudioLoader::volume_linear() const { return volume_.load(std::memory_order_relaxed); }
+void AudioLoader::set_volume_linear(float v) { volume_.store(v, std::memory_order_relaxed); }

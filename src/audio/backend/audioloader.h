@@ -43,8 +43,8 @@ public:
     LoadStatus getLoadStatus() const;
     const double pitch() const;
     double& pitch();
-    const double volume_linear() const;
-    double& volume_linear();
+    float volume_linear() const;
+    void set_volume_linear(float v);
 
     /// 从同一文件重建实例
     AudioLoader clone() const;
@@ -59,7 +59,7 @@ private:
     LoadStatus load_status_;
     std::atomic<PlayStatus> play_status_;
     double pitch_ = 1.0;
-    double volume_ = 1.0;
+    std::atomic<float> volume_{1.0f};
 
     // 预解码缓冲区
     std::vector<float> pcm_buffer_;

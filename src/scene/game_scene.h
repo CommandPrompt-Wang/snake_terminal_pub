@@ -9,15 +9,10 @@
 #include "game/snake_anim.h"
 #include "raylib.h"
 
-#include <chrono>
 #include <cmath>
 #include <deque>
-#include <list>
 #include <memory>
-#include <vector>
 
-// -- GameScene --------------------------------------
-// The main game scene, now using the Snake class for snake management.
 class GameScene : public Scene {
 public:
     GameScene();
@@ -33,41 +28,38 @@ public:
     const char* get_name() const override { return "GameScene"; }
 
 protected:
-    // -- Event handling --
     void on_inputevent(InputEvent& event) override;
 
 private:
-    // -- helper --
     void consume_pending_dir();
-    Sprite apple{"resources/img/apple.png",10};
-    // -- state --
+    void setup_snake_body(std::unique_ptr<SnakeBody>& body, Snake& snake, int playerId);
+    void on_die_finished_handler(Snake& snake);
+    bool try_interrupt_dying(SnakeBody& body);
+    bool handle_respawn(Snake& s, Snake& otherSnake, Direction dir,
+                        std::deque<Direction>& pending,
+                        SnakeBody& body, SnakeBody& otherBody);
+    void handle_move_key(Snake& s, Snake& otherSnake, Direction dir,
+                         std::deque<Direction>& pending,
+                         SnakeBody& body, SnakeBody& otherBody);
+    void sync_scores_and_finish();
+
+    Sprite apple{"resources/img/apple.png", 10};
     Snake p1_{1}, p2_{2};
     Position apple_{-1, -1};
     bool finished_ = false;
     int next_scene_id_ = static_cast<int>(SceneId::DIE);
-
     bool pause = false;
 
-    // Direction queue (pooled input, consumed in update)
     std::deque<Direction> pending_dirs1_;
     std::deque<Direction> pending_dirs2_;
 
-    // timing
     float tick_remain1_ = 0;
     float tick_remain2_ = 0;
     float time_elapsed_ = 0;
     int time_remaining_ = 0;
     float last_tick_sec_ = 0.3f;
 
-    // rendering
     Draw_List draw_list_;
-    // SnakeBody snake_body_1_{nullptr, 0};  // 原默认构造（playerid=0 会加载不存在的 player0fill.png）
-    // SnakeBody snake_body_2_{nullptr, 0};
     std::unique_ptr<SnakeBody> snake_body_1_;
     std::unique_ptr<SnakeBody> snake_body_2_;
-
-    // cell size for rendering
-    static constexpr int CELL_SIZE = 32;
-    static constexpr int OFFSET_X = 0;
-    static constexpr int OFFSET_Y = 200;
 };

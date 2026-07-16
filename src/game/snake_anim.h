@@ -2,7 +2,7 @@
 #include "game/snake_render.h"
 #include "game/snake_state/animate_manager.h"
 #include "game/snake.h"
-#include "config/config.h"
+#include "utility.h"
 #include "render/sprite.h"
 #include "raylib.h"
 #include <vector>
@@ -215,8 +215,8 @@ private:
             body[i].set_pos(logicalBody[i].x, logicalBody[i].y);
         }
         if (!logicalBody.empty()) {
-            head[0].set_pos(logicalBody[0].x * 32, logicalBody[0].y * 32 + 200);
-            head[1].set_pos(logicalBody[0].x * 32, logicalBody[0].y * 32 + 200);
+            head[0].set_pos(grid_to_pixel_x(logicalBody[0].x), grid_to_pixel_y(logicalBody[0].y));
+            head[1].set_pos(grid_to_pixel_x(logicalBody[0].x), grid_to_pixel_y(logicalBody[0].y));
         }
     }
 
@@ -290,8 +290,8 @@ inline void SnakeMove::update() {
         snakebody->body.pop_back();
     }
     if (snakebody->snake->get_body().size() != 0) {
-        snakebody->head[0].set_pos(snakebody->snake->get_body()[0].x * 32, snakebody->snake->get_body()[0].y * 32 + 200);
-        snakebody->head[1].set_pos(snakebody->snake->get_body()[0].x * 32, snakebody->snake->get_body()[0].y * 32 + 200);
+        snakebody->head[0].set_pos(grid_to_pixel_x(snakebody->snake->get_body()[0].x), grid_to_pixel_y(snakebody->snake->get_body()[0].y));
+        snakebody->head[1].set_pos(grid_to_pixel_x(snakebody->snake->get_body()[0].x), grid_to_pixel_y(snakebody->snake->get_body()[0].y));
     }
     for (int i = 0; i < (int)snakebody->body.size(); i++) {
         snakebody->body[i].set_pos(snakebody->snake->get_body()[i].x, snakebody->snake->get_body()[i].y);
@@ -343,7 +343,8 @@ inline void SnakeDie::update() {
         for (int i = dying_offset; i < std::min((int)snakebody->body.size(), dying_offset + dying_length); i++) {
             die_block.emplace_back(std::string("resources/img/die.png"), 5);
             die_block.back().set_scale({2, 2});
-            die_block.back().set_pos(snakebody->body[i].get_pos().x * 32, snakebody->body[i].get_pos().y * 32 + 200);
+            die_block.back().set_pos(grid_to_pixel_x((int)snakebody->body[i].get_pos().x),
+                                     grid_to_pixel_y((int)snakebody->body[i].get_pos().y));
             die_block.back().set_layer(5);
         }
         dying_offset += dying_length;

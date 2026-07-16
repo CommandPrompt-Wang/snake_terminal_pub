@@ -117,8 +117,8 @@ void MenuScene::render() {
     }
 
     // === Hint at bottom ===
-    DrawText("Arrow keys to navigate    Enter to confirm",
-             screenW / 2 - MeasureText("Arrow keys to navigate    Enter to confirm", 18) / 2,
+    DrawText("W/S or I/K to navigate    Enter to confirm",
+             screenW / 2 - MeasureText("W/S or I/K to navigate    Enter to confirm", 18) / 2,
              screenH - 40,
              18, GRAY);
 }

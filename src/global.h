@@ -34,6 +34,22 @@ namespace Global {
     };
     inline GameOverReason end_reason = GameOverReason::NONE;
 
+    inline int end_reason_priority(GameOverReason reason) {
+        switch (reason) {
+        case GameOverReason::NONE:       return 0;
+        case GameOverReason::DEATH:      return 1;
+        case GameOverReason::MANUAL:     return 2;
+        case GameOverReason::TIMEOUT:    return 3;
+        case GameOverReason::FULL_BOARD: return 4;
+        }
+        return 0;
+    }
+
+    inline void set_end_reason(GameOverReason reason) {
+        if (end_reason_priority(reason) > end_reason_priority(end_reason))
+            end_reason = reason;
+    }
+
     enum class GameMode {
         DEATHMATCH,
         TIMERACE,

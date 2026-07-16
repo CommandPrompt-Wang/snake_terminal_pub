@@ -2,8 +2,7 @@
 #include "raylib.h"
 #include "render/sprite.h"
 #include "render/render.h"
-#include "game/snake.h"
-#include "game/snake_state/animate_manager.h"
+#include "utility.h"
 #include "config/config.h"
 #include <string>
 #include <array>
@@ -95,7 +94,7 @@ public:
 
     void set_pos (Vector2 pos) {
         this->pos = pos;
-        Vector2 draw_position = Vector2{32 * pos.x, 32 * pos.y} + Vector2{0, 200};
+        Vector2 draw_position = Vector2{grid_to_pixel_x((int)pos.x), grid_to_pixel_y((int)pos.y)};
         side[0].set_pos(draw_position);side[1].set_pos(draw_position);side[2].set_pos(draw_position);side[3].set_pos(draw_position);
         speedup[0].set_pos(draw_position);speedup[1].set_pos(draw_position);speedup[2].set_pos(draw_position);speedup[3].set_pos(draw_position);
         fill.set_pos(draw_position);

@@ -15,7 +15,6 @@ void Snake::init(int startX, int startY, Direction dir, int len) {
     body_.clear();
     curDir_ = dir;
     lastMoveDir_ = dir;
-    curSpeed_ = 1;
     is_ghost_ = false;
     collidable_ = true;
     for (int i = 0; i < len; ++i) {
@@ -30,7 +29,6 @@ void Snake::reset() {
     body_.clear();
     curDir_ = Direction::DOWN;
     lastMoveDir_ = Direction::DOWN;
-    curSpeed_ = 1;
     score_ = 0;
     is_ghost_ = false;
     collidable_ = true;
@@ -167,7 +165,7 @@ Global::PlayerStatus Snake::tick(const Snake& other, Position& apple) {
         apple = random_apple_pos(*this, other);
         if (apple.x < 0) {
             logw("board full, no apple position");
-            Global::end_reason = Global::GameOverReason::FULL_BOARD;
+            Global::set_end_reason(Global::GameOverReason::FULL_BOARD);
             set_player_status(Global::PlayerStatus::STARVED);
             return Global::PlayerStatus::STARVED;
         }
@@ -178,25 +176,25 @@ Global::PlayerStatus Snake::tick(const Snake& other, Position& apple) {
     return Global::PlayerStatus::ALIVE;
 }
 
-bool Snake::respawn(const Snake& other) {
+bool Snake::apply_reborn_cost() {
     int deduct = game_config().reborn_costs;
-
-    // 从尾部切掉 reborn_costs 节
-    int to_remove = std::min(deduct, (int)body_.size());
-    for (int i = 0; i < to_remove; ++i)
-        body_.pop_back();
-
-    // 同步分数 = 身体长度 - 3
-    score_ = (int)body_.size() - 3;
-
-    // 身体切空了 → 饿死
+    remove_from_back(deduct);
     if (body_.empty()) {
-        logw("P" + std::to_string(playerId_) + " respawn failed: body empty");
+        add_score(-deduct);
+        logw("P" + std::to_string(playerId_) + " starved: body empty after reborn cost");
+        set_player_status(Global::PlayerStatus::STARVED);
+        return false;
+    }
+    set_score(static_cast<int>(body_.size()) - 3);
+    return true;
+}
+
+bool Snake::deploy_at_safe_pos(const Snake& other) {
+    if (body_.empty()) {
         set_player_status(Global::PlayerStatus::STARVED);
         return false;
     }
 
-    // 找安全位置放置头部
     Position pos = random_safe_pos(*this, other);
     if (pos.x < 0 || pos.y < 0) {
         logw("P" + std::to_string(playerId_) + " respawn failed: no safe position");
@@ -204,16 +202,10 @@ bool Snake::respawn(const Snake& other) {
         return false;
     }
 
-    // 将整条蛇平移到安全位置
     int dx = pos.x - body_[0].x;
     int dy = pos.y - body_[0].y;
-    for (auto& seg : body_) {
-        seg.x += dx;
-        seg.y += dy;
-    }
-
-    set_player_status(Global::PlayerStatus::ALIVE);  // 复活成功，清除死亡状态
-    curSpeed_ = 1;
+    translate(dx, dy);
+    set_player_status(Global::PlayerStatus::ALIVE);
     return true;
 }
 
@@ -251,18 +243,15 @@ void Snake::generate_ghost() {
     set_ghost(true);
 }
 
-bool Snake::deploy_from_ghost(Snake& other) {
+void Snake::deploy_from_ghost(Snake& other) {
     logd("[ghost] P" + std::to_string(playerId_) + " deploy at (" + std::to_string(body_[0].x) + "," + std::to_string(body_[0].y) + ")");
 
     set_ghost(false);
-    set_player_status(Global::PlayerStatus::ALIVE);  // 复活成功，清除死亡状态
+    set_player_status(Global::PlayerStatus::ALIVE);
 
     if (check_body_collision(other.body_, body_.front())) {
         other.set_player_status(Global::PlayerStatus::ON_PLAYER);
     }
-
-    curSpeed_ = 1;
-    return true;
 }
 // -- 苹果 / 安全位置（friend 自由函数）--
 

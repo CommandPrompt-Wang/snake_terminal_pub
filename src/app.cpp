@@ -14,6 +14,7 @@ extern "C" {
 
 #include <algorithm>
 #include <clocale>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <ios>
@@ -28,12 +29,23 @@ static std::string tolower_str(const char* s) {
 int main(int argc, char* argv[]) {
     std::ios::sync_with_stdio(false);
 
-    // 切到可执行文件所在目录，确保 snake.cfg、resources/ 等相对路径正确
+    // 资源路径：AppImage 用 APPDIR（挂载点）；配置文件另走 init_config_path（APPIMAGE 旁或 XDG）
     std::error_code ec;
-    std::filesystem::current_path(
-        std::filesystem::canonical(argv[0], ec).parent_path(), ec);
-    if (ec)
-        logw("cannot change to exe directory, cwd unchanged: " + ec.message());
+    std::filesystem::path app_dir;
+#if defined(__linux__)
+    if (const char* appdir = std::getenv("APPDIR"); appdir && *appdir)
+        app_dir = appdir;
+    else
+#endif
+        app_dir = std::filesystem::canonical(argv[0], ec).parent_path();
+
+    if (!app_dir.empty()) {
+        std::filesystem::current_path(app_dir, ec);
+        if (ec)
+            logw("cannot change to app directory, cwd unchanged: " + ec.message());
+    }
+
+    init_config_path(app_dir);
 
 #if defined(_WIN32)
     SetConsoleOutputCP(CP_UTF8);
@@ -60,9 +72,10 @@ int main(int argc, char* argv[]) {
     }
 
     log("Welcome to Snake Terminal! Ciallo～(∠・ω< )⌒★");
+    log_config_startup();
     log("Loading configuration...");
     // load config – silently falls back to defaults on failure
-    load_config("snake.cfg");
+    load_config();
     log("Done.");
 
     log("Initializing audio...");
@@ -116,7 +129,7 @@ int main(int argc, char* argv[]) {
 
     // save config on clean exit
     log("Saving configuration...");
-    save_config("snake.cfg");
+    save_config();
     log("Done.");
 
     log("Goodbye!");

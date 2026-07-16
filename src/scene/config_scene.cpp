@@ -22,7 +22,7 @@ void ConfigScene::on_inputevent(InputEvent& event) {
 
     Config& cfg = game_config();
 
-    // CTRL 键按住时调整量 ×10
+    // Shift 键按住时调整量 ×10
     float mult = (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_SHIFT)) ? 10.0f : 1.0f;
 
     switch (event.get_key_code()) {

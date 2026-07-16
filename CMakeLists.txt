@@ -5,21 +5,18 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-# Default to Debug build if not specified
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Debug CACHE STRING "Build type" FORCE)
 endif()
 
-# Debug-specific flags
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     add_compile_options(-g -O0)
     add_definitions(-DDEBUG)
 endif()
 
-# raylib as a git submodule – built inline, no system install needed
 add_subdirectory(third_party/raylib)
 
-add_executable(snake
+set(SNAKE_SOURCES
     src/app.cpp
     src/scene/scene_manager.cpp
     src/scene/game_scene.cpp
@@ -29,10 +26,11 @@ add_executable(snake
     src/game/snake.cpp
     src/config/config_loader.cpp
     src/audio/backend/audioloader.cpp
+    src/audio/audiomanager.cpp
     src/utils/log.cpp
-    src/utility.h
-    src/game/snake_anim.h
 )
+
+add_executable(snake ${SNAKE_SOURCES})
 
 target_include_directories(snake PRIVATE
     ${CMAKE_SOURCE_DIR}/src
@@ -41,19 +39,16 @@ target_include_directories(snake PRIVATE
 )
 target_link_libraries(snake PRIVATE raylib)
 
-# miniaudio WASAPI 后端所需的 Windows 系统库
 if(WIN32)
     target_link_libraries(snake PRIVATE winmm ole32 imm32)
 endif()
 
-# MinGW: 静态链接 libgcc/libstdc++，避免依赖额外的 DLL
 if(MINGW)
     set_target_properties(snake PROPERTIES
         LINK_FLAGS "-static"
     )
 endif()
 
-# Symlink compile_commands.json to project root for clangd / VS Code IntelliSense
 if(CMAKE_EXPORT_COMPILE_COMMANDS)
     add_custom_target(compile_commands_link ALL
         COMMAND ${CMAKE_COMMAND} -E create_symlink
@@ -62,3 +57,28 @@ if(CMAKE_EXPORT_COMPILE_COMMANDS)
         COMMENT "Linking compile_commands.json for IDE"
     )
 endif()
+
+enable_testing()
+
+# Unit tests (no raylib)
+add_executable(snake_tests
+    tests/snake_collide_test.cpp
+    src/game/snake.cpp
+    src/utils/log.cpp
+    src/audio/audiomanager.cpp
+    src/audio/backend/audioloader.cpp
+)
+target_include_directories(snake_tests PRIVATE
+    ${CMAKE_SOURCE_DIR}/src
+    ${CMAKE_SOURCE_DIR}/third_party/dr_libs
+    ${CMAKE_SOURCE_DIR}/third_party/miniaudio
+)
+if(WIN32)
+    target_link_libraries(snake_tests PRIVATE winmm ole32)
+endif()
+if(MINGW)
+    set_target_properties(snake_tests PROPERTIES
+        LINK_FLAGS "-static"
+    )
+endif()
+add_test(NAME snake_collide COMMAND snake_tests)

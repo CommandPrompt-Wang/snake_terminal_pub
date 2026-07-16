@@ -36,7 +36,7 @@ public:
         }
 
         audio_loader_->pitch() = pitch_;
-        audio_loader_->volume_linear() = volume_linear_;
+        audio_loader_->set_volume_linear(static_cast<float>(volume_linear_));
         volume_db_ = 20.0 * std::log10((std::max)(volume_linear_, 1e-6));
         is_playing_ = false;
         return true;
@@ -97,13 +97,13 @@ public:
     void set_volume_db(double db) {
         volume_db_ = db;
         volume_linear_ = std::pow(10.0, db / 20.0);
-        if (audio_loader_) audio_loader_->volume_linear() = volume_linear_;
+        if (audio_loader_) audio_loader_->set_volume_linear(static_cast<float>(volume_linear_));
     }
 
     void set_volume_linear(double v) {
         volume_linear_ = v;
         volume_db_ = 20.0 * std::log10(std::max(v, 1e-6));
-        if (audio_loader_) audio_loader_->volume_linear() = v;
+        if (audio_loader_) audio_loader_->set_volume_linear(static_cast<float>(v));
     }
 
     AudioStreamPlayer clone() const {
@@ -116,7 +116,7 @@ public:
         p.pitch_ = pitch_;
         p.volume_linear_ = volume_linear_;
         p.volume_db_ = volume_db_;
-        if (p.audio_loader_) p.audio_loader_->volume_linear() = volume_linear_;
+        if (p.audio_loader_) p.audio_loader_->set_volume_linear(static_cast<float>(volume_linear_));
         return p;
     }
 

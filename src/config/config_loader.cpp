@@ -3,11 +3,20 @@
 #include "utils/log.h"
 
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iomanip>
 #include <sstream>
 #include <string>
+
+#if defined(__linux__) || defined(__APPLE__)
+#include <unistd.h>
+#endif
+
+namespace fs = std::filesystem;
+
+static fs::path g_config_path;
 
 static std::string defaults_string() {
     const auto& c = game_config();
@@ -25,16 +34,122 @@ static std::string defaults_string() {
     return s.str();
 }
 
-bool load_config(const std::string& path) {
+static bool dir_is_writable(const fs::path& dir) {
+    if (dir.empty()) return false;
+    std::error_code ec;
+    if (!fs::exists(dir, ec) || !fs::is_directory(dir, ec)) return false;
+#if defined(__linux__) || defined(__APPLE__)
+    return access(dir.c_str(), W_OK) == 0;
+#else
+    fs::path probe = dir / ".snake_write_test";
+    {
+        std::ofstream f(probe);
+        if (!f) return false;
+    }
+    fs::remove(probe, ec);
+    return true;
+#endif
+}
+
+static fs::path xdg_config_home() {
+    if (const char* xdg = std::getenv("XDG_CONFIG_HOME")) {
+        if (*xdg) return fs::path(xdg);
+    }
+    if (const char* home = std::getenv("HOME"))
+        return fs::path(home) / ".config";
+    return {};
+}
+
+static fs::path xdg_config_file() {
+    fs::path xdg = xdg_config_home();
+    if (xdg.empty()) return {};
+    fs::path dir = xdg / "snake_terminal";
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    if (!dir_is_writable(dir)) return {};
+    return dir / "snake.cfg";
+}
+
+// 若目录可写，返回该目录下的 snake.cfg（AppImage 文件路径则取其所在目录）
+static fs::path portable_cfg_if_writable(const fs::path& base) {
+    if (base.empty()) return {};
+    fs::path dir = base;
+    std::error_code ec;
+    if (fs::is_regular_file(dir, ec))
+        dir = dir.parent_path();
+    if (dir.empty() || !dir_is_writable(dir))
+        return {};
+    return dir / "snake.cfg";
+}
+
+static fs::path resolve_config_path(const fs::path& app_dir) {
+#if defined(__linux__) || defined(__APPLE__)
+    // AppImage 运行时注入 APPIMAGE / ARGV0 → 磁盘上 .AppImage 所在目录（非只读挂载点）
+    if (const char* appimage = std::getenv("APPIMAGE")) {
+        if (fs::path cfg = portable_cfg_if_writable(appimage); !cfg.empty())
+            return cfg;
+    }
+    if (const char* argv0 = std::getenv("ARGV0")) {
+        if (fs::path cfg = portable_cfg_if_writable(argv0); !cfg.empty())
+            return cfg;
+    }
+    if (const char* portable = std::getenv("SNAKE_PORTABLE_DIR")) {
+        if (fs::path cfg = portable_cfg_if_writable(portable); !cfg.empty())
+            return cfg;
+    }
+#endif
+
+    if (!app_dir.empty()) {
+        if (fs::path cfg = portable_cfg_if_writable(app_dir); !cfg.empty())
+            return cfg;
+    }
+
+#if defined(__linux__) || defined(__APPLE__)
+    if (fs::path xdg = xdg_config_file(); !xdg.empty())
+        return xdg;
+#endif
+
+    return app_dir.empty() ? fs::path("snake.cfg") : app_dir / "snake.cfg";
+}
+
+void init_config_path(const fs::path& app_dir) {
+    g_config_path = resolve_config_path(app_dir);
+}
+
+void log_config_startup() {
+#if defined(__linux__)
+    if (const char* appimage = std::getenv("APPIMAGE"); appimage && *appimage) {
+        log("AppImage detected: " + std::string(appimage));
+    } else if (const char* appdir = std::getenv("APPDIR"); appdir && *appdir) {
+        log("AppImage detected (APPDIR=" + std::string(appdir) + ")");
+    }
+#endif
+    if (!g_config_path.empty())
+        log("config file: " + g_config_path.string());
+}
+
+const fs::path& config_path() {
+    return g_config_path;
+}
+
+static bool ensure_config_parent() {
+    fs::path parent = g_config_path.parent_path();
+    if (parent.empty()) return true;
+    std::error_code ec;
+    fs::create_directories(parent, ec);
+    return dir_is_writable(parent);
+}
+
+static bool load_config_file(const fs::path& path) {
     std::ifstream f(path);
     if (!f.is_open()) {
-        if (std::filesystem::is_directory(path)) {
-            logw("A Foldier?!! Ohh fxxk u! ('" + path + "' is a directory)");
+        if (fs::is_directory(path)) {
+            logw("A Foldier?!! Ohh fxxk u! ('" + path.string() + "' is a directory)");
             return false;
         }
-        log("config file '" + path + "' not found or inaccessible, first launch?");
+        log("config file '" + path.string() + "' not found or inaccessible, first launch?");
         log("creating one with default values: " + defaults_string());
-        save_config(path);  // 尝试用默认值创建
+        save_config();
         f.open(path);
         if (!f.is_open()) {
             logw("cannot create config, using defaults: " + defaults_string());
@@ -45,18 +160,15 @@ bool load_config(const std::string& path) {
     Config& cfg = game_config();
     std::string line;
     while (std::getline(f, line)) {
-        // strip comment
         auto hash = line.find('#');
         if (hash != std::string::npos) line.resize(hash);
 
-        // find '='
         auto eq = line.find('=');
         if (eq == std::string::npos) continue;
 
         auto key = line.substr(0, eq);
         auto val = line.substr(eq + 1);
 
-        // trim whitespace
         auto trim = [](std::string& s) {
             auto p = s.find_first_not_of(" \t\r\n");
             s.erase(0, p);
@@ -67,17 +179,17 @@ bool load_config(const std::string& path) {
         trim(val);
 
         bool  b = (val == "1" || val == "true" || val == "yes");
-        float f = 0.0f;
+        float fv = 0.0f;
         int i = 0;
-        try { f = std::stof(val); } catch (...) { if (val != "true" && val != "false" && val != "yes" && val != "no") logw("failed to parse float: " + key + " = " + val); }
+        try { fv = std::stof(val); } catch (...) { if (val != "true" && val != "false" && val != "yes" && val != "no") logw("failed to parse float: " + key + " = " + val); }
         try { i = std::stoi(val); } catch (...) { if (val != "true" && val != "false" && val != "yes" && val != "no") logw("failed to parse int: " + key + " = " + val); }
 
         if (key == "volume")                  cfg.volume                   = std::clamp(i, 0, 100);
         if (key == "allow_acceleration")        cfg.allowAcceleration        = b;
         if (key == "toroidal_space")            cfg.toroidalSpace            = b;
         if (key == "allow_through_others")      cfg.allowThroughOthers       = b;
-        if (key == "speed_factor")              cfg.speed_factor             = std::max(0.1f, f);
-        if (key == "increasing_difficulty")     cfg.increasing_difficulty    = std::max(0.0f, f);
+        if (key == "speed_factor")              cfg.speed_factor             = std::max(0.1f, fv);
+        if (key == "increasing_difficulty")     cfg.increasing_difficulty    = std::max(0.0f, fv);
         if (key == "time_match_duration")       cfg.time_match_duration      = std::max(0, i);
         if (key == "reborn_costs")               cfg.reborn_costs             = std::max(0, i);
         if (key == "respawn_in_advance")          cfg.respawnInAdvance         = b;
@@ -86,10 +198,27 @@ bool load_config(const std::string& path) {
     return true;
 }
 
-void save_config(const std::string& path) {
-    std::ofstream f(path);
+bool load_config() {
+    if (g_config_path.empty()) {
+        logw("config path not initialized");
+        return false;
+    }
+    return load_config_file(g_config_path);
+}
+
+void save_config() {
+    if (g_config_path.empty()) {
+        logw("config path not initialized");
+        return;
+    }
+    if (!ensure_config_parent()) {
+        logw("cannot create config directory: " + g_config_path.parent_path().string());
+        return;
+    }
+
+    std::ofstream f(g_config_path);
     if (!f.is_open()) {
-        logw("cannot write config file '" + path + "'");
+        logw("cannot write config file '" + g_config_path.string() + "'");
         return;
     }
 

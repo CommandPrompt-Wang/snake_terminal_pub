@@ -17,7 +17,6 @@ public:
     std::deque<Position>&       get_body_mut()   { return body_; }
     Direction  get_direction()     const { return curDir_; }
     Direction  get_last_move_dir() const { return lastMoveDir_; }
-    int        get_speed()         const { return curSpeed_; }
     int        get_player_id()     const { return playerId_; }
     int        get_score()         const { return score_; }
     size_t     get_length()        const { return body_.size(); }
@@ -25,7 +24,6 @@ public:
     // -- 修改器 --
     void set_direction(Direction d)     { curDir_ = d; }
     void set_last_move_dir(Direction d) { lastMoveDir_ = d; }
-    void set_speed(int s)               { curSpeed_ = s; }
     void set_score(int s)               { score_ = s; }
     void add_score(int delta)           { score_ += delta; }
 
@@ -47,7 +45,10 @@ public:
 
     // -- 高层操作 --
     Global::PlayerStatus tick(const Snake& other, Position& apple);
-    bool respawn(const Snake& other);
+    /// 扣除 reborn_costs 并同步分数；身体切空则饿死，返回 false
+    bool apply_reborn_cost();
+    /// 在 apply_reborn_cost 之后，将蛇平移到安全位置复活
+    bool deploy_at_safe_pos(const Snake& other);
     void remove_from_back(int count);
     void translate(int dx, int dy);
     void set_player_status(Global::PlayerStatus status) const;
@@ -64,7 +65,7 @@ public:
     // ── 虚影（respawnInAdvance）──
     void    generate_ghost();                    // 随机位置 + 平移蛇体
     void    set_ghost(bool on);                  // 切换虚影状态（同时设不可碰撞/可碰撞）
-    bool    deploy_from_ghost(Snake& other);     // 部署：恢复态势，检查踩杀
+    void    deploy_from_ghost(Snake& other);     // 部署：恢复态势，检查踩杀
 
     bool is_ghost()        const { return is_ghost_; }
     bool get_collidable()  const { return collidable_; }
@@ -73,12 +74,11 @@ private:
     std::deque<Position> body_;
     Direction curDir_ = Direction::DOWN;
     Direction lastMoveDir_ = Direction::DOWN;
-    int curSpeed_ = 1;
     int playerId_ = 0;
     int score_ = 0;
 
-    bool is_ghost_   = false;  // 虚影态
-    bool collidable_ = true;   // 参与碰撞
+    bool is_ghost_   = false;
+    bool collidable_ = true;
 
     static std::mt19937 rng_;
 };

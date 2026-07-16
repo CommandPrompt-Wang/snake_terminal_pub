@@ -1,8 +1,8 @@
 #pragma once
 #include <algorithm>
-#include <cstring>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 #include "audio/audiostreamplayer.h"
@@ -11,51 +11,35 @@
 
 class AudioManager {
 private:
+    struct Command {
+        enum Type { PlaySound, StopSound, AddSfx, SetVolume };
+        Type type;
+        std::string name;
+        std::unique_ptr<AudioStreamPlayer> sfx;
+        float volume = 1.0f;
+    };
+
     std::map<std::string, AudioStreamPlayer> mp;
     std::string current_sound_;
 
-    // sfx 并发池
-    std::map<std::string, std::vector<std::unique_ptr<AudioStreamPlayer>>> sfx_pool_;
+    // 仅音频回调线程读写（命令队列 drain 后）
+    std::vector<std::unique_ptr<AudioStreamPlayer>> sfx_pool_;
 
-    // 共享设备
-    ma_device device_;
+    std::mutex cmd_mutex_;
+    std::vector<Command> cmd_queue_;
+
+    ma_device device_{};
     bool device_initialized_ = false;
 
-    void cleanup_pool(const std::string& name) {
-        auto& v = sfx_pool_[name];
-        v.erase(std::remove_if(v.begin(), v.end(),
-            [](auto& p) { return !p->isPlaying(); }), v.end());
-    }
+    void push_command(Command cmd);
+    void process_commands();
+    void cleanup_pool();
 
     static void ma_data_callback(ma_device* pDevice, void* pOutput,
-                                  const void* /*pInput*/, ma_uint32 frameCount) {
-        auto* mgr = static_cast<AudioManager*>(pDevice->pUserData);
-        auto* out = static_cast<float*>(pOutput);
-        ma_uint32 ch = pDevice->playback.channels;
-        ma_uint32 rate = pDevice->sampleRate;
-
-        std::memset(out, 0, frameCount * ch * sizeof(float));
-
-        // 混音当前 sound
-        if (!mgr->current_sound_.empty()) {
-            auto it = mgr->mp.find(mgr->current_sound_);
-            if (it != mgr->mp.end()) {
-                auto* ld = it->second.get_loader();
-                if (ld) ld->mix(out, frameCount, ch, rate);
-            }
-        }
-
-        // 混音 sfx 池
-        for (auto& [name, pool] : mgr->sfx_pool_) {
-            for (auto& p : pool) {
-                auto* ld = p->get_loader();
-                if (ld) ld->mix(out, frameCount, ch, rate);
-            }
-        }
-    }
+                                   const void* pInput, ma_uint32 frameCount);
 
 public:
-    AudioManager() { std::memset(&device_, 0, sizeof(device_)); }
+    AudioManager() = default;
     ~AudioManager() {
         if (device_initialized_) {
             ma_device_stop(&device_);
@@ -63,6 +47,9 @@ public:
         }
         mp.clear();
     }
+
+    AudioManager(const AudioManager&) = delete;
+    AudioManager& operator=(const AudioManager&) = delete;
 
     bool init_device() {
         ma_device_config config = ma_device_config_init(ma_device_type_playback);
@@ -92,33 +79,35 @@ public:
     }
 
     void play_sound(const std::string& name) {
-        auto it = mp.find(name);
-        if (it == mp.end()) { logw("sound not found: " + name); return; }
-        stop_sound();
-        it->second.play();
-        current_sound_ = name;
+        if (mp.find(name) == mp.end()) { logw("sound not found: " + name); return; }
+        Command cmd;
+        cmd.type = Command::PlaySound;
+        cmd.name = name;
+        push_command(std::move(cmd));
     }
 
     void stop_sound() {
-        if (current_sound_.empty()) return;
-        auto it = mp.find(current_sound_);
-        if (it != mp.end()) it->second.stop();
-        current_sound_.clear();
+        Command cmd;
+        cmd.type = Command::StopSound;
+        push_command(std::move(cmd));
     }
 
     void play_sfx(const std::string& name) {
         auto it = mp.find(name);
         if (it == mp.end()) { logw("sfx not found: " + name); return; }
-        cleanup_pool(name);
         auto inst = std::make_unique<AudioStreamPlayer>(it->second.clone());
         if (!inst->isLoadedSuccessfully()) { logw("sfx clone load failed: " + name); return; }
-        inst->play();
-        sfx_pool_[name].push_back(std::move(inst));
+        Command cmd;
+        cmd.type = Command::AddSfx;
+        cmd.sfx = std::move(inst);
+        push_command(std::move(cmd));
     }
 
     void set_volume_all(int vol_0_100) {
-        float v = vol_0_100 / 100.0f;
-        for (auto& [_, p] : mp) p.set_volume_linear(v);
+        Command cmd;
+        cmd.type = Command::SetVolume;
+        cmd.volume = vol_0_100 / 100.0f;
+        push_command(std::move(cmd));
     }
 
     bool has_player(const std::string& name) {

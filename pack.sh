@@ -82,7 +82,12 @@ fi
 cat > "$APPDIR/AppRun" << 'EOF'
 #!/bin/bash
 HERE="$(dirname "$(readlink -f "$0")")"
+export APPDIR="${APPDIR:-$HERE}"
 export LD_LIBRARY_PATH="${HERE}/lib:${LD_LIBRARY_PATH:-}"
+# AppImage 运行时通常已设置 APPIMAGE；若缺失则尝试 ARGV0（同为 .AppImage 路径）
+if [ -z "${APPIMAGE:-}" ] && [ -n "${ARGV0:-}" ]; then
+    export APPIMAGE="$(readlink -f "${ARGV0}" 2>/dev/null || echo "${ARGV0}")"
+fi
 exec "${HERE}/snake" "$@"
 EOF
 chmod +x "$APPDIR/AppRun"
