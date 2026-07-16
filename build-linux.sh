@@ -31,7 +31,11 @@ if [ "$BUILD_RAYLIB" = true ] || [ ! -f CMakeCache.txt ]; then
     cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" || exit 1
 fi
 
-cmake --build . -j"$(nproc)" || exit 1
+if command -v nproc >/dev/null 2>&1; then
+    cmake --build . -j"$(nproc)" || exit 1
+else
+    cmake --build . -j1 || exit 1
+fi
 cd ..
 
 # distribute the build artifacts
