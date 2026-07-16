@@ -1,0 +1,9 @@
+\frametitle{构建与运行}
+\begin{verbatim}
+./build.sh                 # 增量构建
+./build.sh --build-raylib  # 含 raylib
+./dist/snake --loglevel debug
+\end{verbatim}
+
+  \vspace{0.5em}
+  Windows 可用 \texttt{build.bat}；启动时切到可执行文件目录，保证相对路径正确。

@@ -1,0 +1,187 @@
+% !TEX program = xelatex
+\documentclass[aspectratio=169,17pt]{beamer}
+
+\usepackage{fontspec}
+\usepackage{xeCJK}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\setCJKmainfont[Path=/Users/eric/Library/Fonts/]{LXGWWenKai-Regular.ttf}
+\setmainfont[Path=/System/Library/Fonts/]{Helvetica.ttc}
+
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{footline}[frame number]
+
+\title{Snake Terminal}
+\subtitle{双人贪吃蛇 —— 课程答辩}
+\author{编程实战作业}
+\date{\today}
+
+\begin{document}
+
+\begin{frame}
+  \titlepage
+\end{frame}
+
+\begin{frame}{目录}
+  \tableofcontents
+\end{frame}
+
+\section{项目概述}
+
+\begin{frame}{项目简介}
+  \begin{itemize}
+    \item \textbf{Snake Terminal}：C++17 + raylib 的双人图形化贪吃蛇
+    \item 场景驱动主循环；玩法可配置；含动画、音效与日志
+    \item 构建：CMake + \texttt{build.sh}/\texttt{build.bat}；配置：\texttt{snake.cfg}
+    \item 依赖：raylib（子模块）、miniaudio、dr\_mp3
+  \end{itemize}
+
+  \vspace{0.8em}
+  \begin{block}{目标}
+    逻辑与表现解耦、场景可扩展，在双人玩法之上做出完整的工程闭环。
+  \end{block}
+\end{frame}
+
+\section{系统架构}
+
+\begin{frame}{模块划分}
+  \begin{columns}[T]
+    \begin{column}{0.52\textwidth}
+      \begin{itemize}
+        \item \texttt{scene/} 菜单、配置、对局、结算
+        \item \texttt{game/} 蛇逻辑 + 动画状态机
+        \item \texttt{event/} 可消费事件分发
+        \item \texttt{render/} Sprite / 分层 DrawList
+        \item \texttt{audio/} 预解码混音音频
+        \item \texttt{config/}、\texttt{utils/} 配置与日志
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.44\textwidth}
+      \textbf{场景流}
+      \begin{center}
+        菜单 \\[0.3em]
+        $\swarrow$\quad$\searrow$ \\[0.3em]
+        配置\quad 游戏 \\[0.3em]
+        $\searrow$\quad$\swarrow$ \\[0.3em]
+        结算 $\rightarrow$ 菜单
+      \end{center}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+\begin{frame}{主循环与事件}
+  \textbf{SceneManager::run}（单线程）
+
+  \begin{enumerate}
+    \item 按键白名单 $\rightarrow$ \texttt{InputEvent}
+    \item \texttt{handle\_event}：通用钩子 $\rightarrow$ 类型分发（可 \texttt{consume}）
+    \item \texttt{update(dt)} / 场景切换
+    \item \texttt{render()}（BeginDrawing / EndDrawing）
+  \end{enumerate}
+
+  \vspace{0.5em}
+  \begin{alertblock}{单线程约束}
+    raylib 的 OpenGL context 与 \texttt{thread\_local} 要求窗口、纹理、绘制同线程。
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{逻辑与动画分离}
+  \begin{columns}[T]
+    \begin{column}{0.48\textwidth}
+      \textbf{Snake}（纯逻辑）
+      \begin{itemize}
+        \item 移动、碰撞、得分
+        \item 复活、尾部切除
+        \item 虚影 / 可碰撞开关
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\textwidth}
+      \textbf{SnakeBody} 状态机
+      \begin{itemize}
+        \item Move：移动 / 加速特效
+        \item Die：逐节 X 标记
+        \item Waiting：虚影或冻结
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{0.8em}
+  由 \texttt{GameScene} 驱动：\\
+  MOVE $\to$ DIE $\to$ WAITING $\to$ MOVE \\
+  双玩家独立 tick 计时；Shift 按下时 tick 间隔减半。
+\end{frame}
+
+\section{玩法与工程}
+
+\begin{frame}{双模式与操作}
+  \begin{table}
+    \centering
+    \small
+    \begin{tabular}{@{}lll@{}}
+      \toprule
+      模式 & 规则 & 死亡后 \\
+      \midrule
+      Deathmatch & 撞墙 / 己 / 对方即终局 & 动画后结算 \\
+      Time Race & 限时计分，可复活 & 切尾 + 虚影/重部署 \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+
+  \vspace{0.6em}
+  P1：WASD\quad P2：IJKL\quad Shift：加速 \\
+  ESC 暂停；暂停后 T 回菜单 / Y 强制结束
+\end{frame}
+
+\begin{frame}{可配置规则}
+  \texttt{snake.cfg} 持久化，缺项自动补全：
+  \begin{itemize}
+    \item 音量、加速、环面地图、是否穿过对方
+    \item 速度倍率、难度递增、限时与复活代价
+    \item \textbf{虚影复活}：半透明预览位置后再部署
+    \item \textbf{死亡动画打断}：阈值后可按键跳过（$-1$ 关闭）
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{技术亮点}
+  \begin{enumerate}
+    \item \textbf{场景 + 事件}：生命周期清晰，事件可拦截
+    \item \textbf{逻辑 $\perp$ 表现}：Snake 与动画状态机解耦
+    \item \textbf{自研音频}：预解码 PCM + 回调混音；BGM 独占 / SFX 并发池
+    \item \textbf{日志}：级别过滤、彩色输出、接管 raylib 日志
+    \item \textbf{上游贡献}：修复 raylib \texttt{ImageFromImage} 边界问题（已合并）
+  \end{enumerate}
+\end{frame}
+
+\section{总结}
+
+\begin{frame}[fragile]{构建与运行}
+\begin{verbatim}
+./build.sh                 # 增量构建
+./build.sh --build-raylib  # 含 raylib
+./dist/snake --loglevel debug
+\end{verbatim}
+
+  \vspace{0.5em}
+  Windows 可用 \texttt{build.bat}；启动时切到可执行文件目录，保证相对路径正确。
+\end{frame}
+
+\begin{frame}{总结}
+  \begin{block}{已完成}
+    双人双模式；场景/事件框架；可配置玩法；动画与虚影；音频与日志。
+  \end{block}
+
+  \vspace{0.5em}
+  \begin{block}{可继续}
+    地图障碍 / 关卡；网络对战；资源池与更细的渲染拆分。
+  \end{block}
+
+  \vspace{1em}
+  \begin{center}
+    {\Large 谢谢老师！欢迎提问}
+  \end{center}
+\end{frame}
+
+\end{document}

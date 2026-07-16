@@ -426,10 +426,12 @@ void GameScene::render() {
     // draw apple
     if (apple_.x >= 0 && apple_.y >= 0) {
         Vector2 ap{
-            (float)(apple_.x * CELL_SIZE + OFFSET_X + CELL_SIZE / 2),
-            (float)(apple_.y * CELL_SIZE + OFFSET_Y + CELL_SIZE / 2)
+            (float)(apple_.x * CELL_SIZE + OFFSET_X),
+            (float)(apple_.y * CELL_SIZE + OFFSET_Y)
         };
-        DrawCircleV(ap, CELL_SIZE / 2.0f - 2, RED);
+        apple.set_pos(ap);
+        apple.set_scale({2.0,2.0});
+        apple.draw();
     }
 
     draw_list_.draw();

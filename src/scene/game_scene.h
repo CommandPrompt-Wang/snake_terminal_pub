@@ -39,7 +39,7 @@ protected:
 private:
     // -- helper --
     void consume_pending_dir();
-
+    Sprite apple{"resources/img/apple.png",10};
     // -- state --
     Snake p1_{1}, p2_{2};
     Position apple_{-1, -1};
