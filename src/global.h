@@ -62,5 +62,5 @@ namespace Global {
 
     inline void reset() { should_quit = false; }
 
-    inline AudioManager audio_manager;
+    inline AudioManager audio_manager;  // 全局单例，场景通过 play_sound / play_sfx 驱动
 } // namespace Global

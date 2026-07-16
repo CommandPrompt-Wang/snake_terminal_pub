@@ -79,6 +79,7 @@ int main(int argc, char* argv[]) {
     log("Done.");
 
     log("Initializing audio...");
+    // 启动阶段预加载所有音源 → 注册到 AudioManager → 启动播放设备
     AudioStreamPlayer snd_bgm, snd_die, snd_eat, snd_gameover_death, snd_gameover_nondeath;
     AudioStreamPlayer snd_index_switch, snd_toggle, snd_value_assign, snd_enter, snd_back;
     bool load_success = true;
@@ -111,6 +112,7 @@ int main(int argc, char* argv[]) {
 
     Global::audio_manager.set_volume_all(game_config().volume);
 
+    // 设备只在此处 init 一次，进程退出时由 ~AudioManager 释放；切场景勿重复 init/uninit
     if (!Global::audio_manager.init_device()) {
         loge("Failed to initialize audio device.");
         return 1;

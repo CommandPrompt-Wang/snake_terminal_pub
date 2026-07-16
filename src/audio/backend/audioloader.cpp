@@ -1,4 +1,4 @@
-// 单编译单元：先定义实现宏，再引入单头文件库的实现段
+// 单编译单元：在此 TU 内展开 dr_mp3 / miniaudio 实现，避免重复链接
 #define DR_MP3_IMPLEMENTATION
 #define MINIAUDIO_IMPLEMENTATION
 #include "dr_mp3.h"
@@ -12,6 +12,7 @@
 #include <string>
 #include <utility>
 
+// 构造时一次性解码 MP3 → float32 PCM 缓冲
 AudioLoader::AudioLoader(std::string filepath)
     : load_status_(LoadStatus::UnknownError)
     , play_status_(PlayStatus::Stopped)
@@ -96,6 +97,7 @@ void AudioLoader::stop() {
     cursor_.store(0, std::memory_order_release);
 }
 
+// 将本实例 PCM 累加到 out（+=），支持声道转换与采样率重采样
 bool AudioLoader::mix(float* out, ma_uint32 frameCount, ma_uint32 outChannels, ma_uint32 outSampleRate) {
     if (play_status_.load(std::memory_order_acquire) != PlayStatus::Playing)
         return false;
@@ -104,7 +106,7 @@ bool AudioLoader::mix(float* out, ma_uint32 frameCount, ma_uint32 outChannels, m
     float vol = volume_.load(std::memory_order_relaxed);
     float srcRatio = static_cast<float>(sample_rate_) / static_cast<float>(outSampleRate);
 
-    // 同采样率 + 同声道 → 快速路径（无插值）
+    // 源/目标采样率相同 → 逐帧拷贝，无插值
     if (srcRatio == 1.0f) {
         static bool logged_fast = false;
         if (!logged_fast) { logd("mix fast path (no resample): " + filepath_); logged_fast = true; }
@@ -118,15 +120,18 @@ bool AudioLoader::mix(float* out, ma_uint32 frameCount, ma_uint32 outChannels, m
         }
 
         if (channels_ == outChannels) {
+            // 声道数一致：直接累加
             for (ma_uint64 i = 0; i < n * channels_; ++i)
                 out[i] += pcm_buffer_[cur * channels_ + i] * vol;
         } else if (channels_ == 1 && outChannels == 2) {
+            // 单声道 → 立体声：复制到 L/R
             for (ma_uint64 i = 0; i < n; ++i) {
                 float s = pcm_buffer_[cur + i] * vol;
                 out[i * 2] += s;
                 out[i * 2 + 1] += s;
             }
         } else if (channels_ == 2 && outChannels == 1) {
+            // 立体声 → 单声道：取平均
             for (ma_uint64 i = 0; i < n; ++i) {
                 float s = (pcm_buffer_[(cur + i) * 2] + pcm_buffer_[(cur + i) * 2 + 1]) * 0.5f * vol;
                 out[i] += s;
@@ -143,7 +148,7 @@ bool AudioLoader::mix(float* out, ma_uint32 frameCount, ma_uint32 outChannels, m
         return true;
     }
 
-    // 采样率转换 + 线性插值
+    // 采样率不同 → 线性插值重采样
     static bool logged_interp = false;
     if (!logged_interp) {
         logd("mix resample path: " + filepath_ + " src=" + std::to_string(sample_rate_)
@@ -213,6 +218,7 @@ double AudioLoader::setCurrentTime(double time) {
 }
 
 AudioLoader AudioLoader::clone() const {
+    // 重新打开并解码同一文件，获得独立 cursor 的副本
     return AudioLoader(filepath_);
 }
 

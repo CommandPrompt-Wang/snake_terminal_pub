@@ -7,6 +7,8 @@
 #include "backend/audioloader.h"
 #include "utils/log.h"
 
+// 播放器封装层：持有 AudioLoader，提供音量/音高接口与 clone 能力。
+// 游戏逻辑只与此类交互，不直接操作 AudioLoader 或 miniaudio 设备。
 class AudioStreamPlayer {
     bool is_playing_ = false;
     bool loaded_successfully_ = false;
@@ -24,6 +26,7 @@ public:
     AudioStreamPlayer(AudioStreamPlayer&&) noexcept = default;
     AudioStreamPlayer& operator=(AudioStreamPlayer&&) noexcept = default;
 
+    // 加载 MP3 并预解码到内存
     bool load(const std::string& filepath) {
         audio_loader_ = std::make_unique<AudioLoader>(filepath);
         loaded_successfully_ =
@@ -107,6 +110,7 @@ public:
     }
 
     AudioStreamPlayer clone() const {
+        // 深拷贝 loader，使多个 SFX 实例可并发播放同一音效
         AudioStreamPlayer p;
         if (audio_loader_) {
             p.audio_loader_ = std::make_unique<AudioLoader>(audio_loader_->clone());
@@ -125,6 +129,7 @@ public:
     }
     bool isLoadedSuccessfully() const { return loaded_successfully_; }
 
+    // 供 AudioManager 回调直接混音
     AudioLoader* get_loader() { return audio_loader_.get(); }
     const AudioLoader* get_loader() const { return audio_loader_.get(); }
 };

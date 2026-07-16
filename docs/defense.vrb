@@ -1,13 +1,13 @@
 \frametitle{构建与运行}
 \begin{verbatim}
 # Linux / macOS
-./build.sh                 # 增量构建
-./build.sh --debug         # Debug
-./build.sh --build-raylib  # 含 raylib 重编译
-./build.sh --clean
+./build.bat                 # 增量构建
+./build.bat --debug         # Debug
+./build.bat --build-raylib  # 含 raylib 重编译
+./build.bat --clean
 
 # Windows (MinGW)
 ./build.bat / ./build.bat --debug
 
-./dist/snake --loglevel debug
+./dist-linux/snake --loglevel debug
 \end{verbatim}

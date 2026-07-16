@@ -7,6 +7,7 @@
 #include <cmath>
 
 void GameScene::consume_pending_dir() {
+    // 每 tick 最多应用一条方向；180° 反向输入被忽略
     while (!pending_dirs1_.empty()) {
         Direction d = pending_dirs1_.front();
         pending_dirs1_.pop_front();
@@ -38,6 +39,7 @@ void GameScene::on_die_finished_handler(Snake& snake) {
     if (Global::last_game_mode != Global::GameMode::TIMERACE)
         return;
 
+    // 扣一条命；命用尽则结束对局
     if (!snake.apply_reborn_cost()) {
         Global::set_end_reason(Global::GameOverReason::DEATH);
         sync_scores_and_finish();
@@ -45,7 +47,7 @@ void GameScene::on_die_finished_handler(Snake& snake) {
     }
 
     if (game_config().respawnInAdvance)
-        snake.generate_ghost();
+        snake.generate_ghost();  // 预生成幽灵体，复活时直接 deploy
 }
 
 GameScene::GameScene()  = default;
@@ -106,6 +108,7 @@ bool GameScene::handle_respawn(Snake& s, Snake& otherSnake, Direction dir,
         return false;
 
     if (game_config().respawnInAdvance) {
+        // 从幽灵体复活；若对方正踩在幽灵格上则触发对方死亡
         auto prev_status = (otherSnake.get_player_id() == 1)
             ? Global::player_status1 : Global::player_status2;
         s.deploy_from_ghost(otherSnake);
@@ -132,6 +135,7 @@ bool GameScene::handle_respawn(Snake& s, Snake& otherSnake, Direction dir,
 void GameScene::handle_move_key(Snake& s, Snake& otherSnake, Direction dir,
                               std::deque<Direction>& pending,
                               SnakeBody& body, SnakeBody& otherBody) {
+    // 优先级：打断死亡动画 > 等待复活 > 普通转向
     if (try_interrupt_dying(body)) return;
     if (handle_respawn(s, otherSnake, dir, pending, body, otherBody)) return;
     pending.push_back(dir);
@@ -183,7 +187,7 @@ void GameScene::on_inputevent(InputEvent& event) {
 
 void GameScene::update(float dt) {
     if (pause) {
-        draw_list_.update();
+        draw_list_.update();  // 暂停时仍更新动画，但不推进 tick
         return;
     }
 
@@ -220,6 +224,7 @@ void GameScene::update(float dt) {
 
     consume_pending_dir();
 
+    // 根据分数计算 tick 间隔：分数越高越快；Shift 可加速
     auto calc_tick_ms = [&](int score, int player) {
         double mult = 1.0;
         if (game_config().increasing_difficulty > 0) {
@@ -244,6 +249,7 @@ void GameScene::update(float dt) {
     bool died1 = false, died2 = false;
     using S = Global::PlayerStatus;
 
+    // 双蛇 tick 可能同帧触发；循环直到两者均无需 tick 或有人死亡
     while (tick_remain1_ <= 0 || tick_remain2_ <= 0) {
         bool t1 = tick_remain1_ <= 0 && snake_body_1_->is_moving();
         bool t2 = tick_remain2_ <= 0 && snake_body_2_->is_moving();
@@ -292,6 +298,7 @@ void GameScene::update(float dt) {
     if (died1) apply_death(p1_, *snake_body_1_);
     if (died2) apply_death(p2_, *snake_body_2_);
 
+    // DEATHMATCH：一方死亡后另一方进入 waiting，等待其也死亡才结束
     if (!finished_ && Global::last_game_mode == Global::GameMode::DEATHMATCH) {
         if (died1 && !died2) {
             snake_body_2_->draw_in_waiting = true;
@@ -307,6 +314,7 @@ void GameScene::update(float dt) {
 }
 
 void GameScene::render() {
+    // 网格线
     for (int x = 0; x < GRID_W; ++x) {
         for (int y = 0; y < GRID_H; ++y) {
             Rectangle cell{
@@ -322,10 +330,10 @@ void GameScene::render() {
     if (apple_.x >= 0 && apple_.y >= 0) {
         apple.set_pos({grid_to_pixel_x(apple_.x), grid_to_pixel_y(apple_.y)});
         apple.set_scale({2.0f, 2.0f});
-        apple.draw();
+        apple.draw();  // 直接 draw，不加入 draw_list_
     }
 
-    draw_list_.draw();
+    draw_list_.draw();  // 蛇身 + DrawLayer flush
 
     DrawText(TextFormat("P1: %d", p1_.get_score()), 10, 10, 20, DARKGREEN);
     DrawText(TextFormat("P2: %d", p2_.get_score()), 10, 40, 20, DARKBLUE);

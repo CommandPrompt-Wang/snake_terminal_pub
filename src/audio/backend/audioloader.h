@@ -5,6 +5,8 @@
 #include <string>
 #include <vector>
 
+// 音频解码与混音层：启动时将 MP3 全量解码到内存 PCM，运行时由 AudioManager 回调调用 mix() 输出。
+// 不持有 ma_device；设备生命周期由 AudioManager 统一管理。
 class AudioLoader {
 public:
     AudioLoader(std::string filepath);
@@ -46,7 +48,7 @@ public:
     float volume_linear() const;
     void set_volume_linear(float v);
 
-    /// 从同一文件重建实例
+    /// 从同一文件重新解码，供 play_sfx 并发播放（各实例独立 cursor）
     AudioLoader clone() const;
 
     /// 混音到输出缓冲区（AudioManager 回调中调用），返回 false 表示已播完
@@ -57,13 +59,13 @@ public:
 
 private:
     LoadStatus load_status_;
-    std::atomic<PlayStatus> play_status_;
-    double pitch_ = 1.0;
-    std::atomic<float> volume_{1.0f};
+    std::atomic<PlayStatus> play_status_;  // 回调线程读写，主线程只通过 play/stop 修改
+    double pitch_ = 1.0;                     // 预留，当前 mix 未应用
+    std::atomic<float> volume_{1.0f};        // 线性音量 [0, 1]
 
-    // 预解码缓冲区
+    // 预解码 PCM（interleaved float32）；构造时一次性读入，避免实时解码
     std::vector<float> pcm_buffer_;
-    std::atomic<ma_uint64> cursor_{0};
+    std::atomic<ma_uint64> cursor_{0};       // 当前播放位置（帧索引）
     ma_uint64 total_frames_ = 0;
     ma_uint32 channels_ = 0;
     ma_uint32 sample_rate_ = 0;

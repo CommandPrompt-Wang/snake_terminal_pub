@@ -42,16 +42,36 @@ git submodule update --init --recursive
 
 **Linux**
 
-```bash
-./build.sh                    # Release 增量构建
-./build.sh --debug            # Debug 模式
-./build.sh --build-raylib     # 完整构建（含 raylib 重编译）
-./build.sh --clean            # 清除 build/ 和 dist/
+`build.bat` 与 `pack.bat` 是 **polyglot 黑魔法**——同一个文件在 Windows 下当批处理、在 Linux/macOS 下当 shell 脚本，自动路由到对应平台的实现。Linux 下用法：
 
-./dist/snake                  # 运行
+```bash
+bash ./build.bat              # 或 ./build.bat
+bash ./pack.bat
+```
+
+参数会透传（如 `--debug`、`--clean`、`--build-raylib`）。
+
+> **出问题时用分离脚本。** 黑魔法依赖混用 CRLF/LF 换行，编辑器或 Git 可能把它搞坏。若路由失败、heredoc 报错、或行为异常，请直接调用平台专用脚本：
+>
+> | 用途 | Linux | Windows |
+> |------|-------|---------|
+> | 构建 | `build-linux.sh` | `build-windows.bat` |
+> | 打包 | `pack-linux.sh` | `pack-windows.bat` |
+>
+> 维护者须知：batch 段（至 `END_WIN` 含）须 CRLF，shell 段须 LF；`.gitattributes` 中已对 `build.bat` / `pack.bat` 设 `-text` 防止 Git 自动转换。
+
+```bash
+./build-linux.sh              # 等价于 bash ./build.bat
+./build-linux.sh --debug      # Debug 模式
+./build-linux.sh --build-raylib  # 完整构建（含 raylib 重编译）
+./build-linux.sh --clean      # 清除 build-linux/ 和 dist-linux/
+
+./dist-linux/snake            # 运行
 ```
 
 **Windows（MinGW）**
+
+`build.bat` / `pack.bat` 在 Windows 下同样可用；若异常，改用 `build-windows.bat` / `pack-windows.bat`。
 
 ```bat
 build.bat                     :: Release 构建
@@ -71,21 +91,23 @@ dist-windows\snake.exe        :: 运行
 依赖 [AppImageTool](https://github.com/AppImage/AppImageKit/releases)（默认路径 `~/appimagetool-x86_64.AppImage`，可通过环境变量 `APPIMAGETOOL_PATH` 覆盖）：
 
 ```bash
-./build.sh
-./pack.sh
+./build-linux.sh              # 或 bash ./build.bat
+./pack-linux.sh               # 或 bash ./pack.bat
 
-./pack/snake-x86_64.AppImage    # 运行
+./pack-linux/snake-x86_64.AppImage    # 运行
 ```
 
-脚本会自动收集运行时 `.so` 依赖、生成 `.desktop` 与 `AppRun`，输出至 `pack/snake-x86_64.AppImage`。
+脚本会自动收集运行时 `.so` 依赖、生成 `.desktop` 与 `AppRun`，输出至 `pack-linux/snake-x86_64.AppImage`。
 
 **Windows — 单文件 exe**
 
-依赖 [Enigma Virtual Box](https://enigmaprotector.com/en/aboutvb.html)（默认安装路径 `C:\Program Files (x86)\Enigma Virtual Box\`）。打包配置见 `pack-windows.evb`：
+依赖 [Enigma Virtual Box](https://enigmaprotector.com/en/aboutvb.html)（默认安装路径 `C:\Program Files (x86)\Enigma Virtual Box\`）。
+
+**首次打包前**须用 Enigma VB GUI 打开 `pack-windows.evb`，将 `InputFile`、`OutputFile` 及所有资源文件的 `File` 路径改为你本机仓库的**绝对路径**。已尝试过相对路径，Enigma VB 不生效，因此只能写绝对路径；仓库里的 `.evb` 仅作模板，路径仍指向作者机器。
 
 ```bat
-build.bat
-pack.bat
+build-windows.bat
+pack-windows.bat              :: 或 build.bat / pack.bat
 
 pack-windows\snake-packed.exe   :: 运行
 ```
@@ -95,7 +117,7 @@ Enigma VB 将 `dist-windows\snake.exe` 与 `resources/` 虚拟化打包为单个
 ### 命令行
 
 ```bash
-./dist/snake --loglevel debug    # 日志级别：debug / info / warning / error（默认 info）
+./dist-linux/snake --loglevel debug    # 日志级别：debug / info / warning / error（默认 info）
 ```
 
 Windows 下额外设置控制台 UTF-8 编码并禁用 IME 输入法。
@@ -157,13 +179,17 @@ snake_terminal.pub/
 ├── src/                      # 源代码
 ├── resources/                # 纹理、音效等资源
 ├── third_party/              # raylib、miniaudio、dr_libs 子模块
-├── build.sh / build.bat      # 构建脚本
-├── pack.sh / pack.bat        # 打包脚本
+├── build.bat                 # 跨平台 polyglot 入口（黑魔法，见上文）
+├── build-linux.sh            # Linux 构建（推荐）
+├── build-windows.bat         # Windows 构建（推荐）
+├── pack.bat                  # 跨平台 polyglot 入口（黑魔法，见上文）
+├── pack-linux.sh             # Linux AppImage 打包（推荐）
+├── pack-windows.bat          # Windows Enigma VB 打包（推荐）
 ├── pack-windows.evb          # Windows Enigma VB 打包配置
 ├── CMakeLists.txt
-├── dist/                     # Linux 构建输出
+├── dist-linux/               # Linux 构建输出
 ├── dist-windows/             # Windows 构建输出
-├── pack/                     # Linux AppImage 输出
+├── pack-linux/               # Linux AppImage 输出
 └── pack-windows/             # Windows 单文件 exe 输出
 ```
 
@@ -203,7 +229,7 @@ src/
 │       ├── audioloader.h    # AudioLoader：预解码 PCM + mix() 混音（含线性插值重采样）
 │       └── audioloader.cpp  # 实现（单编译单元含 dr_mp3 + miniaudio IMPL）
 ├── render/                  # 渲染组件
-│   ├── draw_list.h          # Draw_List（update/draw 批量管理 + DrawLayer 分层绘制）
+│   ├── drawlist.h          # DrawList（update/draw 批量管理 + DrawLayer 分层绘制）
 │   ├── render.h             # BasicRenderClass 基类
 │   └── sprite.h             # Sprite（raylib 纹理精灵，支持 alpha 透明度）
 ├── utils/                   # 工具

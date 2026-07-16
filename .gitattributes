@@ -4,5 +4,9 @@
 # Windows batch files require CRLF
 *.bat text eol=crlf
 
+# Polyglot routers: mixed CRLF (batch) + LF (shell); keep as-is
+build.bat -text
+pack.bat -text
+
 # windows enigma packing
 pack-windows.evb text eol=crlf

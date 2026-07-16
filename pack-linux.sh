@@ -1,6 +1,6 @@
 #!/bin/bash
 # ============================================================
-#  pack.sh — Package snake into an AppImage
+#  pack-linux.sh — Package snake into an AppImage
 # ============================================================
 
 # ---- 可配置项 (可被环境变量覆盖) ----
@@ -10,20 +10,20 @@ AppImageToolPath="${APPIMAGETOOL_PATH:-${HOME}/appimagetool-x86_64.AppImage}"
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-DIST_DIR="$SCRIPT_DIR/dist"
-PACK_DIR="$SCRIPT_DIR/pack"
+DIST_DIR="$SCRIPT_DIR/dist-linux"
+PACK_DIR="$SCRIPT_DIR/pack-linux"
 APPDIR="$PACK_DIR/snake.AppDir"
 OUTPUT="$PACK_DIR/snake-x86_64.AppImage"
 
 # ---- 检查 dist ----
-echo "==> 检查 dist..."
+echo "==> 检查 dist-linux..."
 
-[ -d "$DIST_DIR" ]       || { echo "错误: dist/ 目录不存在！请先运行 build.sh。"; exit 1; }
-[ -f "$DIST_DIR/snake" ] || { echo "错误: dist/snake 不存在！"; exit 1; }
-[ -d "$DIST_DIR/resources" ] || { echo "错误: dist/resources 不存在！"; exit 1; }
+[ -d "$DIST_DIR" ]       || { echo "错误: dist-linux/ 目录不存在！请先运行 build-linux.sh。"; exit 1; }
+[ -f "$DIST_DIR/snake" ] || { echo "错误: dist-linux/snake 不存在！"; exit 1; }
+[ -d "$DIST_DIR/resources" ] || { echo "错误: dist-linux/resources 不存在！"; exit 1; }
 
-echo "  ✓ dist/snake"
-echo "  ✓ dist/resources/"
+echo "  ✓ dist-linux/snake"
+echo "  ✓ dist-linux/resources/"
 
 # ---- 检查 AppImageTool ----
 echo "==> 检查 AppImageTool..."

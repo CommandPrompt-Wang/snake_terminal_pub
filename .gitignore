@@ -1,8 +1,8 @@
-build/
+build-linux/
 build-windows/
-dist/
+dist-linux/
 dist-windows/
-pack/
+pack-linux/
 pack-windows/
 .cache/
 compile_commands.json

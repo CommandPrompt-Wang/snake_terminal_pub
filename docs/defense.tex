@@ -39,7 +39,7 @@
     \item \textbf{Snake Terminal}：C++17 + raylib 的双人图形化贪吃蛇
     \item 架构：Scene 回调式单线程主循环（参考 Godot / Unity 场景思路）
     \item 玩法可配置；含动画状态机、虚影复活、自研音频与日志
-    \item 构建：CMake + \texttt{build.sh} / \texttt{build.bat}；配置：\texttt{snake.cfg}
+    \item 构建：CMake + \texttt{build.bat}（路由 \texttt{build-linux.sh} / \texttt{build-windows.bat}）；配置：\texttt{snake.cfg}
     \item 依赖：raylib（子模块）、miniaudio、dr\_mp3
   \end{itemize}
 
@@ -300,7 +300,7 @@ void handle_event(Event& event) {
   \end{table}
 
   \vspace{0.3em}
-  CLI：\texttt{./dist/snake --loglevel debug}（默认 Info）\\
+  CLI：\texttt{./dist-linux/snake --loglevel debug}（默认 Info）\\
   启动时切到可执行文件目录；Windows 额外设 UTF-8 + 禁用 IME。
 \end{frame}
 
@@ -337,15 +337,15 @@ void handle_event(Event& event) {
 \begin{frame}[fragile]{构建与运行}
 \begin{verbatim}
 # Linux / macOS
-./build.sh                 # 增量构建
-./build.sh --debug         # Debug
-./build.sh --build-raylib  # 含 raylib 重编译
-./build.sh --clean
+./build.bat                 # 增量构建
+./build.bat --debug         # Debug
+./build.bat --build-raylib  # 含 raylib 重编译
+./build.bat --clean
 
 # Windows (MinGW)
 ./build.bat / ./build.bat --debug
 
-./dist/snake --loglevel debug
+./dist-linux/snake --loglevel debug
 \end{verbatim}
 \end{frame}
 

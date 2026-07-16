@@ -2,7 +2,7 @@
 
 #include "raylib.h"
 #include "render/render.h"
-#include "render/draw_list.h"
+#include "render/drawlist.h"
 #include <string>
 #include<iostream>
 
@@ -249,10 +249,9 @@ public:
         frame_process = 0.0f;
     }
 
-    // Advance animation; rebuild texture if entering a new frame
+    // 推进帧动画计时；纹理重建延迟到 draw()，避免 update 阶段重复加载
     void update()
     {
-
         if (hframes * vframes != 1 && !stopped && during_time > 0.0f)
         {
             int total = hframes * vframes;
@@ -268,13 +267,13 @@ public:
             }
         }
 
-        // Only update texture when frame changes (including first time)
     }
 
-    // ---------- Draw ----------
+    // 提交本帧绘制命令到 DrawLayer（按 layer 排序后统一 flush）
     void draw()
     {
         if (hide) return;
+        // 仅在逻辑帧变化时从 Image 裁剪并重建 Texture，减少 GPU 上传
         if (texture_frame != frame) {
             refresh_texture();
             texture_frame = frame;

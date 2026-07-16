@@ -17,15 +17,15 @@ for arg in "$@"; do
 done
 
 if [ "$CLEAN" = true ]; then
-    echo "Cleaning build and dist..."
-    rm -rf build dist
+    echo "Cleaning build-linux and dist-linux..."
+    rm -rf build-linux dist-linux
     echo "Done."
     exit 0
 fi
 
 # build the project
-mkdir -p build
-cd build
+mkdir -p build-linux
+cd build-linux
 
 if [ "$BUILD_RAYLIB" = true ] || [ ! -f CMakeCache.txt ]; then
     cmake .. -DCMAKE_BUILD_TYPE="$BUILD_TYPE" || exit 1
@@ -35,7 +35,7 @@ cmake --build . -j"$(nproc)" || exit 1
 cd ..
 
 # distribute the build artifacts
-rm -rf dist
-mkdir -p dist
-cp build/snake dist/snake
-cp -r resources dist/resources
+rm -rf dist-linux
+mkdir -p dist-linux
+cp build-linux/snake dist-linux/snake
+cp -r resources dist-linux/resources
