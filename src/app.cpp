@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
     AudioStreamPlayer snd_bgm, snd_die, snd_eat, snd_gameover_death, snd_gameover_nondeath;
     AudioStreamPlayer snd_index_switch, snd_toggle, snd_value_assign, snd_enter, snd_back;
     bool load_success = true;
-    load_success &= snd_bgm.load("resources/sound/Ngau_Hung.mp3");
+    load_success &= snd_bgm.load("resources/sound/mountain_spider.mp3");
     load_success &= snd_die.load("resources/sfx/player.die.mp3");
     load_success &= snd_eat.load("resources/sfx/player.eat.mp3");
     load_success &= snd_gameover_death.load("resources/sound/gameover.death.mp3");
