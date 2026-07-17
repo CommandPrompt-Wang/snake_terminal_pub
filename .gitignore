@@ -28,3 +28,7 @@ Makefile
 cmake_install.cmake
 
 snake.cfg
+
+# 私有文档（含 .doc，不提交）
+docs.private/
+*.doc
