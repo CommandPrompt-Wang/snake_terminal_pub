@@ -1,6 +1,7 @@
-\beamer@sectionintoc {1}{项目概述}{3}{0}{1}
-\beamer@sectionintoc {2}{系统架构}{4}{0}{2}
-\beamer@sectionintoc {3}{玩法设计}{9}{0}{3}
-\beamer@sectionintoc {4}{核心实现}{12}{0}{4}
-\beamer@sectionintoc {5}{设计取舍与贡献}{16}{0}{5}
-\beamer@sectionintoc {6}{构建与总结}{18}{0}{6}
+\beamer@sectionintoc {1}{个人介绍与贡献}{3}{0}{1}
+\beamer@sectionintoc {2}{项目概述}{4}{0}{2}
+\beamer@sectionintoc {3}{系统架构}{5}{0}{3}
+\beamer@sectionintoc {4}{玩法设计}{10}{0}{4}
+\beamer@sectionintoc {5}{核心实现}{13}{0}{5}
+\beamer@sectionintoc {6}{设计取舍与贡献}{17}{0}{6}
+\beamer@sectionintoc {7}{构建与总结}{19}{0}{7}
